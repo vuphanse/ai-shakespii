@@ -42,12 +42,15 @@ rules:
   FM01: error                 # frontmatter well-formed; unknown fields warned
   FM02: error                 # name discipline, = dir name
   FM03: { severity: warn, options: { warnChars: 500, maxChars: 1024 } }
-  FM04: error                 # trigger-first third-person description
+  FM04: { severity: error, options: { triggerPatterns: ["use when", "use for", "use if", "use this", "invoke when", "when the user"] } }   # trigger-first third-person description
   FM05: error                 # version required, semver — D4 flagship
   # CT — content contract (severities mirror the anatomy table above)
   CT01: error                 # preconditions enumerate every external dependency
   CT02: error                 # output contract resolvable inside the skill dir
-  CT03: error                 # ≥1 concrete worked example
+  CT03: { severity: error, options: {
+    token: "TODO(shakespii):",
+    inputMarkers: ["input", "given", "before", "prompt", "scenario", "user asks", "user says"],
+    outputMarkers: ["output", "expected", "result", "after", "produces", "response", "→", "->"] } }   # concrete input→output worked example
   CT04: warn                  # inputs declared
   CT05: warn                  # anti-patterns / failure modes present
   CT06: warn                  # intent present (new)

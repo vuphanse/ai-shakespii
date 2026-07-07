@@ -161,10 +161,11 @@ FM04: { severity: error, options: { triggerPatterns: ["use when", "use for", "us
   - Otherwise the **effective text** — the union text minus list items whose content consists solely of quoted strings (the deterministic encoding of the catalog's "trigger-phrase lists don't count") — must contain a **worked input→output pair**: at least one occurrence of an *input marker* from `options.inputMarkers` followed later in the effective text by at least one occurrence of an *output marker* from `options.outputMarkers`. Matching is case-insensitive; alphabetic markers match at word boundaries, arrow tokens (`→`, `->`) match literally; markers count whether they appear in prose, sub-headings, or code fences. No such ordered pair → error ("Examples section has no concrete input→output worked example"). Generic prose, however long, fails without the pair — length alone is not evidence of a worked example.
   - This marker check is a deterministic proxy, stated as such: static analysis cannot judge example *quality*. Calibration (§5) tunes the marker lists as profile data; semantic grading of examples belongs to the M4 harness.
 - CT01/CT02 content checks (dependency enumeration, output-contract resolvability) arrive with those rules at M3; only CT03 is in the seed set.
-- Requires this amendment to `profiles/default.yaml`:
+- Requires this amendment to `profiles/default.yaml`. The token value mirrors PH01's; the profile-consistency test asserts they stay equal.
 
 ```yaml
 CT03: { severity: error, options: {
+  token: "TODO(shakespii):",
   inputMarkers: ["input", "given", "before", "prompt", "scenario", "user asks", "user says"],
   outputMarkers: ["output", "expected", "result", "after", "produces", "response", "→", "->"] } }
 ```

@@ -1,6 +1,6 @@
 # M2 — MVP CLI: design specification
 
-**Date:** 2026-07-07 · **Status:** approved — awaiting implementation
+**Date:** 2026-07-07 · **Status:** implemented — exit criteria verified 2026-07-07
 
 Builds the first runnable `shakespii`: parser, rule engine with the six seed rules, `init`, `lint` (pretty + `--json`), and the dogfood calibration run. Consumes the M1 artifacts verbatim: `profiles/default.yaml` and `templates/skill/` (spec: `docs/specs/2026-07-07-m1-phase1-specification-design.md`).
 
@@ -267,12 +267,12 @@ Three test tiers:
 
 ## Exit criteria
 
-- [ ] `bun test` green; all six seed rules have failing-first fixture tests
-- [ ] Keystone test locks the fresh-`init` RED set: exactly 18 PH01 + 1 FM04 + 1 CT03 errors on `init` output (no other findings), exit 1; `init` output byte-matches the template modulo `{{name}}`
-- [ ] `bun link` exposes a working `shakespii` from an arbitrary cwd (templates/profile resolve from package root)
-- [ ] `profiles/default.yaml` amended with the FM04 and CT03 options blocks exactly as in §3
-- [ ] `docs/CALIBRATION-M2.md` committed with per-rule counts and every deviation from audit predictions adjudicated
-- [ ] §4 `--json` schema is implemented as written (it is the M2.5 contract)
+- [x] `bun test` green; all six seed rules have failing-first fixture tests
+- [x] Keystone test locks the fresh-`init` RED set: exactly 18 PH01 + 1 FM04 + 1 CT03 errors on `init` output (no other findings), exit 1; `init` output byte-matches the template modulo `{{name}}`
+- [x] `bun link` exposes a working `shakespii` from an arbitrary cwd (templates/profile resolve from package root)
+- [x] `profiles/default.yaml` amended with the FM04 and CT03 options blocks exactly as in §3
+- [x] `docs/CALIBRATION-M2.md` committed with per-rule counts and every deviation from audit predictions adjudicated
+- [x] §4 `--json` schema is implemented as written (it is the M2.5 contract)
 
 ## Out of scope for M2
 

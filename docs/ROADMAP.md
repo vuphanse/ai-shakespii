@@ -17,10 +17,10 @@ Milestones are sequential; each ends with something runnable or decided. TDD thr
 ## M2 — MVP CLI
 
 - [x] Resolve open decisions: runtime language (TypeScript on Bun), distribution (local link at MVP), CLI name (`shakespii` confirmed) — see the M2 spec
-- [ ] Parser: frontmatter + markdown section AST + sibling-file inventory
-- [ ] `shakespii init <name>` generating the M1 scaffold
-- [ ] `shakespii lint <path>` with seed rules FM01, FM02, FM04, CT03, ST02, PH01 — ESLint-style output plus `--json` (pulled forward from M3 as the M2.5 contract), each finding cites its rule ID
-- [ ] Calibration run against the dogfood corpus (`~/.claude/skills/` + superpowers 6.1.1); tune until findings match the audit
+- [x] Parser: frontmatter + markdown section AST + sibling-file inventory
+- [x] `shakespii init <name>` generating the M1 scaffold
+- [x] `shakespii lint <path>` with seed rules FM01, FM02, FM04, CT03, ST02, PH01 — ESLint-style output plus `--json` (pulled forward from M3 as the M2.5 contract), each finding cites its rule ID
+- [x] Calibration run against the dogfood corpus (`~/.claude/skills/` + superpowers 6.1.1); tune until findings match the audit
 
 ## M2.5 — `using-shakespii` companion skill
 

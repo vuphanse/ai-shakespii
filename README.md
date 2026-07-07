@@ -6,7 +6,7 @@ Most prompt tools focus on writing better prompts. ai-shakespii focuses on desig
 
 ## Status
 
-**Foundation phase — no code yet.** All strategic decisions, audit evidence, and the roadmap live in `docs/`. Read them before touching anything.
+**M2 shipped — the MVP CLI is runnable.** `git clone` + `bun install` + `bun link` gives you `shakespii init` and `shakespii lint` (six seed rules, pretty + `--json` output). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M2.5 (the `using-shakespii` companion skill).
 
 ## What this will be
 

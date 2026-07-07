@@ -8,7 +8,7 @@
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| M3 slicing | Two cycles: M3a = 17 single-skill rules + rule-adjacent backlog; M3b = `--corpus` + XS01/XS02 + config-file overrides | One plan for all of M3 would exceed 20 tasks; the two halves have independent surfaces |
+| M3 slicing | Two cycles: M3a = 18 single-skill rules + rule-adjacent backlog; M3b = `--corpus` + XS01/XS02 + config-file overrides | One plan for all of M3 would exceed 20 tasks; the two halves have independent surfaces |
 | M2 deferred backlog | Fold in rule-adjacent items only (see §3); validateProfile depth and inventory edge tests stay deferred | HY01/HY02/ST04 build on link/text extraction — fix it once, before consumers land |
 | Severity posture | Implement catalog severities exactly; calibrate; demote only with documented evidence via the M2 adjudication protocol | The corpus failing loudly is the point; FM05 is the flagship "skills are components" requirement |
 | Score model | **Severity counts only** — closes the roadmap open decision. No 0–100 aggregate | No research-backed weighting exists; an invented formula is false precision and gameable. Revisit condition: M6 library ranking |
@@ -17,7 +17,7 @@
 
 **Delivers:**
 
-1. The 17 remaining single-skill rules: FM03, FM05, CT01, CT02, CT04, CT05, CT06, CT07, ST01, ST03, ST04, ST05, HY01, HY02, HY03, HY04, HY05, HY06. After M3a, all 23 single-skill rules in docs/LINT-RULES.md are live; only XS01/XS02 (corpus context, M3b) and TR01/TR02 (harness, M4) remain.
+1. The 18 remaining single-skill rules: FM03, FM05, CT01, CT02, CT04, CT05, CT06, CT07, ST01, ST03, ST04, ST05, HY01, HY02, HY03, HY04, HY05, HY06. After M3a, all 24 single-skill rules in docs/LINT-RULES.md (the 6 M2 seed rules plus these 18) are live; only XS01/XS02 (corpus context, M3b) and TR01/TR02 (harness, M4) remain.
 2. Five rule-adjacent M2 backlog fixes (§3), landed before the rules that consume them.
 3. Calibration sweep over the dogfood corpus with `docs/CALIBRATION-M3.md` under the M2 adjudication protocol (§7).
 4. Self-cleanliness maintained throughout: keystone RED set verified, `using-shakespii` weld test at zero findings (§6).
@@ -124,13 +124,13 @@ The scaffold template carries real semver `version: 0.1.0`, all seven canonical 
 
 ## 6. Self-cleanliness: keystone and weld
 
-- **Keystone (tests/cli/keystone.test.ts):** locks the exact raw-scaffold finding set — currently 20 errors (18 PH01, 1 FM04, 1 CT03). Expectation, verified rule-by-rule in §4–§5: the template was designed against the full catalog (real semver, all seven headings, no caps-MUST/NEVER, no `@`, no backslash paths, no stats, no bare commands), so the set stays **exactly 20 through all 17 rules**. Any delta is an adjudicated, plan-level change carrying its own justification — never a silent re-lock, never a weakened assertion.
+- **Keystone (tests/cli/keystone.test.ts):** locks the exact raw-scaffold finding set — currently 20 errors (18 PH01, 1 FM04, 1 CT03). Expectation, verified rule-by-rule in §4–§5: the template was designed against the full catalog (real semver, all seven headings, no caps-MUST/NEVER, no `@`, no backslash paths, no stats, no bare commands), so the set stays **exactly 20 through all 18 rules**. Any delta is an adjudicated, plan-level change carrying its own justification — never a silent re-lock, never a weakened assertion.
 - **Weld (tests/skill/using-shakespii.test.ts):** `using-shakespii` must stay at exit 0, `{errors: 0, warnings: 0}`, `findings: []` through every task. If a new rule fires on the skill, the same task fixes the skill content (the zero-findings gate is the companion skill's own bar, per the M2.5 spec). Worst known candidate: HY05 versus the Procedure's command lines — they are fenced/inline today; verified in the HY05 task.
 - **Scaffold template (templates/skill/):** if any adjudicated keystone delta requires a template change, the template edit and the keystone re-lock land in the same task, and `shakespii init` byte-fidelity tests are updated together.
 
 ## 7. Calibration
 
-Re-run `bun scripts/calibrate.ts` with all 23 rules live → `docs/CALIBRATION-M3.md`, following the M2 protocol exactly:
+Re-run `bun scripts/calibrate.ts` with all 24 single-skill rules live → `docs/CALIBRATION-M3.md`, following the M2 protocol exactly:
 
 1. **Predictions table written before the sweep**, from audit + catalog evidence. Seed predictions: FM05 fires on every corpus skill (~27/27 — zero carry `version`); CT01 fires widely (audit S6); ST01 bites writing-skills (689 lines/3,807 words) and subagent-driven-development (419/3,085); ST04 bites writing-skills (`@`-links at 283–288); ST05 fires on discipline-furniture skills lacking the table/red-flags pair (e.g. brainstorming's `<HARD-GATE>`); HY04 bites find-skills ("185K installs"); HY06 bites caveman (~75%) and compress (~65%).
 2. **Actual counts pasted verbatim** from the calibrate script.
@@ -154,7 +154,7 @@ Re-run `bun scripts/calibrate.ts` with all 23 rules live → `docs/CALIBRATION-M
 
 ## 10. Exit criteria
 
-- [ ] All 23 single-skill rules implemented, fixture-tested, and wired into `src/lib/rules/index.ts`
+- [ ] The 18 remaining single-skill rules (§1) implemented, fixture-tested, and wired into `src/lib/rules/index.ts` — all 24 catalog single-skill rules then live
 - [ ] Five backlog items (§3) landed with locking fixtures
 - [ ] Full suite green (unpiped); keystone set verified unchanged or delta adjudicated in the plan; weld test at zero findings
 - [ ] Calibration sweep run; CALIBRATION-M3.md written with predictions, verbatim counts, and adjudication rows

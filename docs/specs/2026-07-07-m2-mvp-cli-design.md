@@ -158,12 +158,15 @@ FM04: { severity: error, options: { triggerPatterns: ["use when", "use for", "us
 - **Presence:** an Examples section per the anatomy alias table — some section's `normalized` heading equals the canonical name or an alias (M1 §1.3 matching: normalize, h2/h3 only, presence = ≥1 match, no content sniffing). Absent → error finding with `line: null`. Presence matching is `anatomyPresence('examples')` from `rules/anatomy.ts`, so CT04–CT07 presence checks at M3 are one-liners.
 - **Content** (evaluated over the union of all matched sections' text, per M1 §1.3 union semantics; content findings cite the first matched section's `startLine`):
   - Any PH01 token in the section text → error ("Examples content is an unfilled placeholder") — M1 §1.4: "a section that exists but contains only a PH01 placeholder fails its content-quality check".
-  - Otherwise the text must contain at least one **example unit**: a fenced code block, or a paragraph/blockquote of ≥ `options.minExampleWords` words. List items whose text consists solely of quoted strings are ignored when counting — that is the deterministic encoding of the catalog's "trigger-phrase lists don't count". No example unit → error.
+  - Otherwise the **effective text** — the union text minus list items whose content consists solely of quoted strings (the deterministic encoding of the catalog's "trigger-phrase lists don't count") — must contain a **worked input→output pair**: at least one occurrence of an *input marker* from `options.inputMarkers` followed later in the effective text by at least one occurrence of an *output marker* from `options.outputMarkers`. Matching is case-insensitive; alphabetic markers match at word boundaries, arrow tokens (`→`, `->`) match literally; markers count whether they appear in prose, sub-headings, or code fences. No such ordered pair → error ("Examples section has no concrete input→output worked example"). Generic prose, however long, fails without the pair — length alone is not evidence of a worked example.
+  - This marker check is a deterministic proxy, stated as such: static analysis cannot judge example *quality*. Calibration (§5) tunes the marker lists as profile data; semantic grading of examples belongs to the M4 harness.
 - CT01/CT02 content checks (dependency enumeration, output-contract resolvability) arrive with those rules at M3; only CT03 is in the seed set.
 - Requires this amendment to `profiles/default.yaml`:
 
 ```yaml
-CT03: { severity: error, options: { minExampleWords: 15 } }
+CT03: { severity: error, options: {
+  inputMarkers: ["input", "given", "before", "prompt", "scenario", "user asks", "user says"],
+  outputMarkers: ["output", "expected", "result", "after", "produces", "response", "→", "->"] } }
 ```
 
 **ST02 — sibling references resolve** (error)
@@ -243,6 +246,7 @@ tests/fixtures/
   fm04-first-person/  fm04-no-trigger/  fm04-trigger-not-first/   # "use when" mid-prose must still fail
   ct03-no-examples/  ct03-alias-heading/   # "## Worked example" must count via alias
   ct03-placeholder-only/  ct03-trigger-list-only/   # placeholder content and quoted-phrase lists must fail
+  ct03-generic-prose/   # long prose with no input→output pair must fail
   st02-broken-link/  st02-parent-escape/
   ph01-one-token/
 ```

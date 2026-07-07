@@ -552,6 +552,14 @@ test('semver with pre-release and build passes', () => {
   expect(FM05.check(skillFromRaw(cleanSkillRaw({ version: '"1.2.3-beta.1+build.5"' })), ctxFor('FM05'))).toHaveLength(0)
 })
 
+test('invalid pre-release/build identifiers fire (SemVer 2.0 strictness)', () => {
+  for (const bad of ['1.2.3-..', '1.2.3-alpha..1', '1.2.3+build..5', '1.2.3-01', '01.2.3']) {
+    const f = FM05.check(skillFromRaw(cleanSkillRaw({ version: `"${bad}"` })), ctxFor('FM05'))
+    expect(f).toHaveLength(1)
+    expect(f[0].message).toBe(`version "${bad}" is not valid semver`)
+  }
+})
+
 test('malformed frontmatter is FM01 territory: no FM05 finding', () => {
   expect(FM05.check(skillFromRaw('not a skill at all'), ctxFor('FM05'))).toHaveLength(0)
 })
@@ -595,7 +603,11 @@ export const FM03: Rule = {
 import type { Rule } from '../types'
 import { fieldLine } from './frontmatter-util'
 
-const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
+// SemVer 2.0 (semver.org grammar): no leading zeros in numeric identifiers;
+// pre-release/build identifiers are dot-separated and non-empty; numeric
+// pre-release identifiers have no leading zeros.
+const SEMVER =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
 
 export const FM05: Rule = {
   id: 'FM05',
@@ -1139,6 +1151,14 @@ test('three MUST/NEVER tokens combined trigger; table-only names the missing hea
   expect(f[0].message).toBe('discipline emphasis found without a Red Flags heading')
 })
 
+test('Reality only in a data row does not satisfy the table half', () => {
+  const table = '| Excuse | Response |\n|---|---|\n| busy | Reality check |'
+  const raw = cleanSkillRaw({ procedure: `This is the iron law.\n\n${table}\n\n## Red Flags\n\n- skipping steps` })
+  const f = ST05.check(skillFromRaw(raw), CTX)
+  expect(f).toHaveLength(1)
+  expect(f[0].message).toBe('discipline emphasis found without a rationalization table with a Reality column')
+})
+
 test('two MUST tokens do not trigger; caps inside fences do not trigger', () => {
   expect(ST05.check(skillFromRaw(cleanSkillRaw({ procedure: 'You MUST run it. You MUST commit.' })), CTX)).toHaveLength(0)
   expect(ST05.check(skillFromRaw(cleanSkillRaw({ procedure: '```\nMUST NEVER MUST <HARD-GATE>\n```' })), CTX)).toHaveLength(0)
@@ -1156,6 +1176,19 @@ Expected: FAIL — module does not exist; exit=1.
 import { textOutsideFences } from '../parser/sections'
 import type { Rule } from '../types'
 
+const PIPE_ROW = /^\s*\|.*\|\s*$/
+const DELIMITER_ROW = /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/
+
+/** True only when a pipe table's HEADER row (the row directly above the delimiter row) carries a Reality column. */
+function hasRealityHeader(text: string): boolean {
+  const lines = text.split('\n')
+  return lines.some((ln, i) => {
+    if (!PIPE_ROW.test(ln)) return false
+    if (!/\|[^|\n]*reality[^|\n]*\|/i.test(ln)) return false
+    return DELIMITER_ROW.test(lines[i + 1] ?? '')
+  })
+}
+
 export const ST05: Rule = {
   id: 'ST05',
   check(skill) {
@@ -1165,7 +1198,7 @@ export const ST05: Rule = {
       /<[A-Z][A-Z-]+>/.test(text) ||
       (text.match(/\b(MUST|NEVER)\b/g)?.length ?? 0) >= 3
     if (!triggered) return []
-    const hasRealityTable = /\|[^|\n]*reality[^|\n]*\|/i.test(text)
+    const hasRealityTable = hasRealityHeader(text)
     const hasRedFlags = /^#{1,6}\s+.*red flags?/im.test(text)
     const missing: string[] = []
     if (!hasRealityTable) missing.push('a rationalization table with a Reality column')

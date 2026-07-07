@@ -28,6 +28,8 @@ Rules are pure functions over a parsed skill: `(frontmatter, section AST, siblin
 
 Section presence for CT01–CT07 is matched via the anatomy alias table in `profiles/default.yaml` (canonical heading + aliases + level), per the M1 spec (docs/specs/2026-07-07-m1-phase1-specification-design.md §1).
 
+**Scope adjudication (M3a):** CT01/CT02/CT04–CT07 ship as **presence-only** checks — a rule reports a finding only when no section heading normalizes to the canonical name or one of its aliases; it never inspects the section's content. Content-completeness (e.g. CT01's "enumerates every external dependency" or CT02's resolvable-contract phrasing) is statically undecidable — a linter cannot know a skill secretly needs `jq`, or that a heading's prose delegates to an unshipped document — and graduates to the M4 harness (M3a spec §4). CT02 in particular does **not** re-check links inside the Output section: ST02 already checks every link in the SKILL.md body, so a per-section re-check would double-report the same broken link. What presence-only CT02 leaves uncaught (a bare prose-path contract like "obey the workflow handoff's output format exactly", pointing at a document that isn't a markdown link) is a documented coverage gap (docs/CALIBRATION-M3.md, `ai-whisper-code-review` example), mirroring the M2 compress/ST02 precedent.
+
 ## ST — Structure
 
 | ID | Severity | Rule | Evidence |
@@ -37,6 +39,12 @@ Section presence for CT01–CT07 is matched via the anatomy alias table in `prof
 | ST03 | warn | Reference files >100 lines carry a table of contents | Anthropic best-practices |
 | ST04 | error | No `@`-prefixed force-load links; cross-skill deps as `REQUIRED SUB-SKILL:` / bare skill names | `@` force-loads and burns context (writing-skills:283-288) |
 | ST05 | warn | Discipline furniture: if the body contains an Iron-Law/MUST/NEVER block, require a `| Excuse | Reality |` rationalization table and a Red Flags list | Pattern proven in TDD / systematic-debugging / verification-before-completion |
+
+**Shipped detection (M3a)** (spec §5; all patterns scan outside fenced/inline code via `textOutsideFences`):
+
+- **ST03** — a md sibling with more than `tocMinLines` (100) lines and no table of contents fires. A TOC is a heading whose normalized text is `contents` or `table of contents`, or at least 3 internal anchor links (`](#…)`) within the first 40 lines.
+- **ST04** — an `@` preceded by start-of-line or whitespace, followed by a path-like token (contains `/` or ends `.md`), fires. Scans SKILL.md plus md siblings.
+- **ST05** — triggered by any of: `iron law` (case-insensitive), an ALL-CAPS XML-style tag matching `<[A-Z][A-Z-]+>`, or ≥3 standalone `MUST`/`NEVER` tokens combined. Once triggered, requires **both** a markdown table whose **header row** (the row directly above the delimiter row — not just any row containing the word) carries a `Reality` column (covers `Excuse/Reality` and `Thought/Reality` variants) **and** a heading matching `/red flags?/i`; the finding names whichever half is missing.
 
 ## HY — Hygiene
 
@@ -48,6 +56,15 @@ Section presence for CT01–CT07 is matched via the anatomy alias table in `prof
 | HY04 | warn | Rot-prone embedded facts (external counts, leaderboards, product stats) flagged unless the skill carries `version` + a last-reviewed marker | find-skills: "185K installs", org leaderboards |
 | HY05 | warn | Commands intended for execution are inside code fences | compress SKILL.md step 2 ships an unfenced run command |
 | HY06 | warn | Quantitative claims (token savings, speedups) must be backed by a shipped eval or marked unverified | caveman claims ~75%, compress README says ~65% — inconsistent, neither verified |
+
+**Shipped detection (M3a)** (spec §5; all patterns scan outside fenced/inline code via `textOutsideFences` unless noted):
+
+- **HY01** — fires on a drive-letter prefix (`X:\`) or a ≥2-backslash word-segment chain (`word\word\word`), scanned everywhere including fenced code (offending paths live in commands). Single backslashes never flag (regex escapes like `\s`, `\d` survive). **Post-calibration refinement (docs/CALIBRATION-M3.md):** a backslash immediately followed by `_` — CommonMark's escaped-underscore syntax, e.g. `signature\_date\_signed` — is excluded from the chain, so markdown-escaped italics markers don't false-positive as Windows path separators.
+- **HY02** — fires on `/Users/...` or `/home/...` (or `X:\Users\`), scanned everywhere including fenced code and all text siblings (not just md).
+- **HY03** — phrase-list-only, word-boundary: `currently`, `as of`, `recently`, `at the time of writing`. Bare dates are never flagged (changelogs, spec filenames, provenance headers are legitimate). Exempt inside `<details>` blocks and under any heading matching `/old patterns/i`.
+- **HY04** — a magnitude number (`\d+` with optional decimal and `K`/`M`/`B` suffix) within 6 tokens of a rot noun (`installs`, `downloads`, `stars`, `users`, `leaderboard`, `rank`/`ranking`) fires. Exempt when the skill carries frontmatter `version` **and** a `/last reviewed/i` marker in SKILL.md or an md sibling. **Post-calibration refinement (docs/CALIBRATION-M3.md):** a magnitude token is skipped when it is a leading ordered-list marker (e.g. `2.`, optionally after heading hashes as in `### 2.`) or immediately preceded by `Step`/`Steps`, so list numbering and `### Step N:` headings no longer false-positive against a nearby rot noun.
+- **HY05** — a line starting (after an optional `$ `) with a known lowercase command word (`git`, `bun`, `npm`, `npx`, `node`, `python`, `python3`, `pip`, `pip3`, `brew`, `curl`, `wget`, `make`, `docker`, `cargo`, `go`, `shakespii`, `whisper`, `claude`) **and** whose remainder carries a flag (`-x`/`--flag`) or a path-ish token (contains `/` or a file extension) fires. The command-word match is case-sensitive lowercase, so sentence-initial prose ("Go to docs/…", "Make sure…") stays silent; the argument requirement keeps prose like "git history proves it" silent.
+- **HY06** — a `%` figure or `Nx` multiplier within 8 tokens of a claim word (`save`/`savings`/`saved`, `faster`, `speedup`, `reduc-`, `compress-`, `improvement`, `smaller`) fires. Exempt when the skill ships `evals/evals.json` (inventory check) or the line contains `unverified`/`anecdotal`.
 
 ## XS — Cross-skill (needs corpus context)
 
@@ -72,3 +89,5 @@ Section presence for CT01–CT07 is matched via the anatomy alias table in `prof
 ## Seed set for MVP
 
 FM01, FM02, FM04, CT03, ST02, PH01 — highest signal, fully static, real offenders in the dogfood corpus to test against. PH01 is in the seed set because without it the init→lint RED loop doesn't exist at MVP (M1 spec §3.4).
+
+**M3a completion (2026-07-08):** all 24 single-skill rules in this catalog (the 6 seed rules above plus the 18 delivered in M3a — FM03, FM05, CT01, CT02, CT04–CT07, ST01, ST03–ST05, HY01–HY06) are implemented, fixture-tested, and live (`src/lib/rules/index.ts`), calibrated against the dogfood corpus (docs/CALIBRATION-M3.md). XS01/XS02 remain pending M3b (`--corpus` context mode). TR01/TR02 remain pending M4 (harness-backed, not static).

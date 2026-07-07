@@ -46,7 +46,7 @@ rules:
   FM05: error                 # version required, semver — D4 flagship
   # CT — content contract (severities mirror the anatomy table above)
   CT01: error                 # preconditions enumerate every external dependency
-  CT02: error                 # output contract resolvable inside the skill dir
+  CT02: error                 # output contract section present (resolvability: ST02)
   CT03: { severity: error, options: {
     token: "TODO(shakespii):",
     inputMarkers: ["input", "given", "before", "prompt", "scenario", "user asks", "user says"],

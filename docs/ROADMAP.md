@@ -29,11 +29,16 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 - [x] Companion skill teaching agents the audit loop (`shakespii lint` per skill → interpret findings → fix → re-lint) and the authoring loop (init → draft → lint-loop until clean → evals → present) — corpus-wide lint arrives with `--corpus` in M3
 - [x] Dogfood: the companion skill itself passes `shakespii lint` (zero findings, weld-tested) and ships its own evals
 
-## M3 — Full rule catalog
+## M3a — Single-skill rule catalog
 
-- [ ] Remaining FM/CT/ST/HY rules from LINT-RULES.md
+- [x] Remaining 18 single-skill FM/CT/ST/HY rules from LINT-RULES.md (all 24 single-skill rules live)
+- [x] Extraction hardening: reference-style links, CRLF normalization, CT03 quoted-example fix, FM04 I/O fix, ST02 fragment lock
+- [x] Calibration sweep against the dogfood corpus (docs/CALIBRATION-M3.md)
+
+## M3b — Corpus mode + config
+
 - [ ] Cross-skill rules XS01/XS02 (corpus-context mode: `shakespii lint --corpus ~/.claude/skills`)
-- [ ] Score model, config file for profile overrides (`--json` moved to M2)
+- [ ] Config file for profile overrides
 
 ## M4 — Test harness
 
@@ -61,5 +66,5 @@ Author the missing engineering skills through shakespii's own pipeline (dogfood)
 | Runtime language | ~~TypeScript/Node (or Bun), Python, Go~~ | **Decided 2026-07-07: TypeScript on Bun** (M2 spec) |
 | Distribution | ~~npm package, Homebrew, plain git clone~~ | **Decided 2026-07-07: local link (`bun link`) for the MVP; npm publish graduates at M5** |
 | CLI name | `shakespii` | **Confirmed 2026-07-07** |
-| Score model | Severity counts only vs 0–100 aggregate score | Vision doc shows "82/100"; ESLint-style may be enough |
+| Score model | ~~Severity counts only vs 0–100 aggregate score~~ | **Decided 2026-07-08: severity counts only** — no research-backed weighting exists; revisit condition: M6 library ranking (M3a spec §0) |
 | Personal-skill migration | Whether the 13 existing personal skills get refactored through shakespii once M2 lands (incl. collapsing the 5 kickoff clones) | Big win, but touches live workflow — sequence carefully |

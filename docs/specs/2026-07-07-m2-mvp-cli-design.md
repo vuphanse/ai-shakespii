@@ -144,7 +144,8 @@ type Finding = RuleFinding & { ruleId: string; severity: 'error' | 'warn' }
 
 **FM04 — trigger-first third-person description** (error)
 - First-person check: `/\bI\b/` (case-sensitive) or `/\b(my|me|we|our|mine|us)\b/i` in the description → error finding.
-- Trigger-phrase check: the description must contain at least one pattern from `options.triggerPatterns` (case-insensitive substring match) → otherwise one error finding naming the expected patterns.
+- Trigger-first check: after trimming leading whitespace, the description must **begin with** one of `options.triggerPatterns` (case-insensitive prefix match) → otherwise one error finding naming the expected starters. A substring match anywhere is explicitly not sufficient — prose that merely mentions "use when" later still fails, per the catalog's "starts 'Use when…' or equivalent" (the tunable pattern list is the "or equivalent").
+- Consequence the keystone test relies on: the scaffold's placeholder description begins with `TODO(shakespii):`, so a fresh `init` output fails FM04 (M1 §3.4 requires exactly this).
 - Skipped when `description` is absent/empty (FM01's finding).
 - Requires this amendment to `profiles/default.yaml` (calibration tunes the list as data, not code):
 
@@ -152,10 +153,18 @@ type Finding = RuleFinding & { ruleId: string; severity: 'error' | 'warn' }
 FM04: { severity: error, options: { triggerPatterns: ["use when", "use for", "use if", "use this", "invoke when", "when the user"] } }
 ```
 
-**CT03 — worked example present** (error)
-- Presence of an Examples section per the anatomy alias table: some section's `normalized` heading equals the canonical name or an alias (M1 §1 matching: normalize, h2/h3 only, presence = ≥1 match, no content sniffing).
-- Implemented as `anatomyPresence('examples')` from `rules/anatomy.ts`, so CT01/CT02/CT04–CT07 at M3 are one-liners. Content quality ("trigger lists don't count") remains M3+ per M1's presence-vs-quality layering.
-- Finding has `line: null` (absence has no location).
+**CT03 — concrete worked example** (error)
+- Two layers, both at M2 (M1 §1.4 places CT03 content quality "from M2 onward"):
+- **Presence:** an Examples section per the anatomy alias table — some section's `normalized` heading equals the canonical name or an alias (M1 §1.3 matching: normalize, h2/h3 only, presence = ≥1 match, no content sniffing). Absent → error finding with `line: null`. Presence matching is `anatomyPresence('examples')` from `rules/anatomy.ts`, so CT04–CT07 presence checks at M3 are one-liners.
+- **Content** (evaluated over the union of all matched sections' text, per M1 §1.3 union semantics; content findings cite the first matched section's `startLine`):
+  - Any PH01 token in the section text → error ("Examples content is an unfilled placeholder") — M1 §1.4: "a section that exists but contains only a PH01 placeholder fails its content-quality check".
+  - Otherwise the text must contain at least one **example unit**: a fenced code block, or a paragraph/blockquote of ≥ `options.minExampleWords` words. List items whose text consists solely of quoted strings are ignored when counting — that is the deterministic encoding of the catalog's "trigger-phrase lists don't count". No example unit → error.
+- CT01/CT02 content checks (dependency enumeration, output-contract resolvability) arrive with those rules at M3; only CT03 is in the seed set.
+- Requires this amendment to `profiles/default.yaml`:
+
+```yaml
+CT03: { severity: error, options: { minExampleWords: 15 } }
+```
 
 **ST02 — sibling references resolve** (error)
 - Extract mdast `link` and `image` node targets from the body. Ignore targets with a URL scheme (`http:`, `https:`, `mailto:`, etc.) and pure-fragment targets (`#…`). Strip any `#fragment`, URL-decode.
@@ -166,7 +175,7 @@ FM04: { severity: error, options: { triggerPatterns: ["use when", "use for", "us
 **PH01 — no unfilled scaffold placeholders** (error)
 - The literal token from `options.token` (default `TODO(shakespii):`) anywhere in SKILL.md (frontmatter and body) or in any sibling text file → one error finding **per occurrence**, with file and line.
 - Sibling scanning uses `FileEntry.text` from the inventory (§2); entries with `text: null` (binary/oversized) are skipped. The rule itself never touches disk.
-- This rule makes a fresh `init` lint RED: the untouched scaffold yields exactly 18 findings (8 SKILL.md + 9 `evals/evals.json` + 1 `README.md`).
+- PH01's share of the fresh-`init` RED set is exactly 18 findings (8 SKILL.md + 9 `evals/evals.json` + 1 `README.md`); FM04 and CT03 contribute one error each — see the §5 keystone test.
 
 ## §4 CLI surface
 
@@ -231,8 +240,9 @@ tests/fixtures/
   minimal-pass/           # clean skill — all six seeds green (the control)
   fm01-no-frontmatter/  fm01-bad-yaml/  fm01-unknown-field/
   fm02-bad-name/  fm02-dir-mismatch/
-  fm04-first-person/  fm04-no-trigger/
+  fm04-first-person/  fm04-no-trigger/  fm04-trigger-not-first/   # "use when" mid-prose must still fail
   ct03-no-examples/  ct03-alias-heading/   # "## Worked example" must count via alias
+  ct03-placeholder-only/  ct03-trigger-list-only/   # placeholder content and quoted-phrase lists must fail
   st02-broken-link/  st02-parent-escape/
   ph01-one-token/
 ```
@@ -240,7 +250,7 @@ tests/fixtures/
 Three test tiers:
 
 1. **Unit** — parser, profile loader, each rule, engine: import `src/lib/` directly, run on fixtures, assert exact findings (rule ID, line, message substring).
-2. **The M1↔M2 keystone test** — lint `templates/skill/` itself: must produce exactly 18 PH01 errors (8 SKILL.md + 9 evals.json + 1 README) and exit 1; and `init` output must byte-match the template modulo `{{name}}` substitution. This welds the RED-by-design contract shut — the scaffold cannot drift without a test failing.
+2. **The M1↔M2 keystone test** — run `init demo-skill` into a temp directory, then lint the output: it must produce exactly the M1 §3.4 RED set — 18 PH01 errors (8 SKILL.md + 9 evals.json + 1 README), 1 FM04 error (placeholder description is not trigger-first), 1 CT03 error (Examples content is a placeholder), **no other findings** — and exit 1. The `init` output must also byte-match `templates/skill/` modulo `{{name}}` substitution. The raw template is deliberately never linted directly: its pre-substitution `name: {{name}}` fails FM02, so only post-`init` output carries the contract. This welds the RED-by-design loop shut — neither the scaffold nor the seed rules can drift without this test failing.
 3. **CLI integration (few)** — `Bun.spawn` the real binary on fixtures: exit codes 0/1/2, `--json` parses and matches the §4 schema, stdout purity in JSON mode. Plus a profile-consistency test loading the real `profiles/default.yaml` (7 anatomy sections, 28 rules) — the permanent replacement for M1's ephemeral consistency script.
 
 **Calibration protocol** (M2's final gate):
@@ -253,9 +263,9 @@ Three test tiers:
 ## Exit criteria
 
 - [ ] `bun test` green; all six seed rules have failing-first fixture tests
-- [ ] Keystone test locks the scaffold contract: exactly 18 PH01 errors on `templates/skill/`, exit 1; `init` output byte-matches the template modulo `{{name}}`
+- [ ] Keystone test locks the fresh-`init` RED set: exactly 18 PH01 + 1 FM04 + 1 CT03 errors on `init` output (no other findings), exit 1; `init` output byte-matches the template modulo `{{name}}`
 - [ ] `bun link` exposes a working `shakespii` from an arbitrary cwd (templates/profile resolve from package root)
-- [ ] `profiles/default.yaml` amended with the FM04 options block exactly as in §3
+- [ ] `profiles/default.yaml` amended with the FM04 and CT03 options blocks exactly as in §3
 - [ ] `docs/CALIBRATION-M2.md` committed with per-rule counts and every deviation from audit predictions adjudicated
 - [ ] §4 `--json` schema is implemented as written (it is the M2.5 contract)
 

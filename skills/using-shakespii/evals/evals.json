@@ -1,0 +1,26 @@
+{
+  "skill": "using-shakespii",
+  "evals": [
+    {
+      "id": "using-shakespii-case-1",
+      "prompt": "TODO(shakespii): realistic user request that should trigger this skill",
+      "expected_output": "TODO(shakespii): what good output looks like",
+      "files": [],
+      "expectations": ["TODO(shakespii): one checkable assertion about the output"]
+    },
+    {
+      "id": "using-shakespii-case-2",
+      "prompt": "TODO(shakespii): a second scenario — vary the input shape",
+      "expected_output": "TODO(shakespii):",
+      "files": [],
+      "expectations": ["TODO(shakespii):"]
+    },
+    {
+      "id": "using-shakespii-case-3",
+      "prompt": "TODO(shakespii): an edge case or near-miss the skill must handle",
+      "expected_output": "TODO(shakespii):",
+      "files": [],
+      "expectations": ["TODO(shakespii):"]
+    }
+  ]
+}

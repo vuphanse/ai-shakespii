@@ -16,10 +16,10 @@ Milestones are sequential; each ends with something runnable or decided. TDD thr
 
 ## M2 — MVP CLI
 
-- [ ] Resolve open decision: runtime language (below) — blocks everything after
+- [x] Resolve open decisions: runtime language (TypeScript on Bun), distribution (local link at MVP), CLI name (`shakespii` confirmed) — see the M2 spec
 - [ ] Parser: frontmatter + markdown section AST + sibling-file inventory
 - [ ] `shakespii init <name>` generating the M1 scaffold
-- [ ] `shakespii lint <path>` with seed rules FM01, FM02, FM04, CT03, ST02 — ESLint-style output, each finding cites its rule ID
+- [ ] `shakespii lint <path>` with seed rules FM01, FM02, FM04, CT03, ST02, PH01 — ESLint-style output plus `--json` (pulled forward from M3 as the M2.5 contract), each finding cites its rule ID
 - [ ] Calibration run against the dogfood corpus (`~/.claude/skills/` + superpowers 6.1.1); tune until findings match the audit
 
 ## M2.5 — `using-shakespii` companion skill
@@ -33,7 +33,7 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 
 - [ ] Remaining FM/CT/ST/HY rules from LINT-RULES.md
 - [ ] Cross-skill rules XS01/XS02 (corpus-context mode: `shakespii lint --corpus ~/.claude/skills`)
-- [ ] `--json` output, score model, config file for profile overrides
+- [ ] Score model, config file for profile overrides (`--json` moved to M2)
 
 ## M4 — Test harness
 
@@ -58,8 +58,8 @@ Author the missing engineering skills through shakespii's own pipeline (dogfood)
 
 | Decision | Options on the table | Notes |
 |---|---|---|
-| Runtime language | TypeScript/Node (or Bun), Python, Go | Parser + CLI ergonomics vs distribution weight; harness shells out to `claude -p` either way |
-| Distribution | npm package, Homebrew, plain git clone | Follows from runtime choice |
-| CLI name | `shakespii` (working name) | Confirm before M2 |
+| Runtime language | ~~TypeScript/Node (or Bun), Python, Go~~ | **Decided 2026-07-07: TypeScript on Bun** (M2 spec) |
+| Distribution | ~~npm package, Homebrew, plain git clone~~ | **Decided 2026-07-07: local link (`bun link`) for the MVP; npm publish graduates at M5** |
+| CLI name | `shakespii` | **Confirmed 2026-07-07** |
 | Score model | Severity counts only vs 0–100 aggregate score | Vision doc shows "82/100"; ESLint-style may be enough |
 | Personal-skill migration | Whether the 13 existing personal skills get refactored through shakespii once M2 lands (incl. collapsing the 5 kickoff clones) | Big win, but touches live workflow — sequence carefully |

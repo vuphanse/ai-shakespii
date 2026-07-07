@@ -25,7 +25,7 @@ function walk(root: string, rel: string, depth: number, out: FileEntry[]): void 
       continue
     }
     const buf = readFileSync(join(root, relPath))
-    out.push({ relPath, size: st.size, text: isBinary(buf) ? null : buf.toString('utf8') })
+    out.push({ relPath, size: st.size, text: isBinary(buf) ? null : buf.toString('utf8').replace(/\r\n/g, '\n') })
   }
 }
 

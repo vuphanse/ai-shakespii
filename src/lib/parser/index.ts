@@ -9,7 +9,7 @@ export { normalizeHeading, extractLinks } from './sections'
 
 export function parseSkill(skillDir: string): ParsedSkill {
   const dir = resolve(skillDir)
-  const raw = readFileSync(join(dir, 'SKILL.md'), 'utf8')
+  const raw = readFileSync(join(dir, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n')
   const { fm, body, bodyLineOffset } = splitFrontmatter(raw)
   const { h1, sections } = extractSections(body, bodyLineOffset)
   return {

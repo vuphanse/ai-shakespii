@@ -1,6 +1,6 @@
 ---
 name: using-shakespii
-description: "TODO(shakespii): Use when <trigger>… — third person, concrete searchable keywords; do not summarize the workflow."
+description: "Use when creating a new agent skill or auditing, linting, or fixing an existing one — drives the shakespii CLI (init, lint --json) to scaffold standard SKILL.md skills and resolve findings until clean."
 version: 0.1.0
 ---
 
@@ -8,28 +8,94 @@ version: 0.1.0
 
 ## Intent
 
-TODO(shakespii): one or two sentences — what capability this skill provides and why it exists.
+Teach an agent to drive the shakespii CLI — the deterministic lint and scaffold
+substrate for Agent Skills — so skills get created and repaired against the anatomy
+contract instead of by taste. The CLI decides; this skill teaches the loop around it.
 
 ## Inputs
 
-TODO(shakespii): what the skill consumes — arguments, files, context. Mark which are optional.
+- Audit: the path to an existing skill directory (one containing `SKILL.md`). Multiple
+  skills are audited one directory at a time.
+- Authoring: the new skill's kebab-case name, its purpose, and the situations that
+  should trigger it — all three confirmed with the human before scaffolding.
+- Optional: a specific finding or rule ID the human wants addressed first.
 
 ## Preconditions
 
-TODO(shakespii): every external dependency — binaries on PATH, env vars, network access, files, path-layout assumptions. If it can fail before step 1, it belongs here.
+- Bun is installed and on PATH (`bun --version` succeeds).
+- The shakespii repo is cloned, dependencies installed, and the CLI linked:
+  `bun install && bun link` inside the repo; `shakespii --version` then resolves.
+- Audit: the target skill directory is readable.
+- Authoring: the parent directory for the new skill is writable.
 
 ## Procedure
 
-TODO(shakespii): numbered steps. Calibrate freedom — prose for judgment steps, exact commands for fragile ones.
+Shared core, both branches:
+
+1. Run `shakespii lint <dir> --json` and parse stdout (schema `version: 1`). Each
+   finding carries `ruleId`, `severity`, `file`, `line`, `message`.
+2. Exit codes: `0` means no errors — proceed. `1` means errors — enter the fix loop.
+   `2` means lint itself could not run — report the stderr message verbatim and stop;
+   never guess around a broken run.
+3. For each finding, look up its `ruleId` in
+   [references/rule-remediations.md](references/rule-remediations.md) and apply the
+   minimal fix. A finding whose rule has no entry there is fixed from its own
+   `message` — messages are written to be actionable.
+4. Re-lint. Loop until exit 0, then handle warnings: fix each one, or surface it to
+   the human explicitly with a reason. Never silently ignore a warning.
+
+Audit branch — fix an existing skill:
+
+5. Lint the directory the human named and work the fix loop above.
+6. Preserve the skill's voice and intent: reword a description to lead with its
+   trigger; do not rewrite what the skill is for.
+7. Report before/after finding counts, what changed per rule, and any warnings left
+   standing with reasons.
+
+Authoring branch — create a new skill:
+
+5. Confirm name, purpose, and trigger situations with the human, then run
+   `shakespii init <name>` in the agreed parent directory.
+6. Fill every section of the scaffold, replacing each placeholder token (the scaffold
+   marks them with `TODO(shakespii)` plus a trailing colon) with real content.
+7. Write at least one concrete worked example in Examples — real input, real output.
+8. Fill `evals/evals.json` with at least three cases, one of them a near-miss
+   negative that must not trigger the skill.
+9. Work the fix loop until lint is clean, then present the skill, its lint output,
+   and its evals to the human. Do not install into `~/.claude/skills/` without
+   explicit approval, and never with findings outstanding.
 
 ## Output
 
-TODO(shakespii): the deliverable's shape and contract, resolvable from files inside this skill directory — never "obey the handoff format" pointing at unshipped documents.
+- Audit: the skill's files fixed in place, plus a report of before/after finding
+  counts and per-rule changes.
+- Authoring: a new skill directory (`SKILL.md`, `README.md`, `evals/evals.json`) that
+  lints clean, presented to the human for approval — not installed.
 
 ## Examples
 
-TODO(shakespii): at least one concrete input→output worked example. Trigger-phrase lists do not count.
+Audit, end to end. The user says: "Lint my skill at `~/.claude/skills/caveman` and
+fix what it finds."
+
+Input: `shakespii lint ~/.claude/skills/caveman --json` exits 1 with one finding —
+`ruleId` FM04, severity error, file `SKILL.md`, line 3, message "description must
+lead with a trigger phrase".
+
+The agent opens the FM04 entry in the remediation reference and rewrites the
+description from "Compresses chat output to save tokens" to "Use when the user asks
+for compressed, token-efficient replies…", changing nothing else.
+
+Output: the re-lint exits 0 with zero findings, and the agent reports "1 error → 0
+findings; FM04 fixed by rewording the description trigger-first", listing no
+remaining warnings.
 
 ## Anti-patterns
 
-TODO(shakespii): common mistakes, rationalizations, and when NOT to use this skill.
+- Editing skill files by taste without running lint first — the CLI is the arbiter.
+- Weakening content to appease a rule: deleting a section to silence a finding, or
+  gutting a description. Fix the defect, keep the substance.
+- Referencing CLI features that do not exist yet. There is no corpus-wide lint mode;
+  audit multiple skills one directory at a time.
+- Installing a freshly authored skill without human approval, or with findings open.
+- Looping on a run that exited `2` — that exit means lint itself could not run;
+  report it instead of retrying.

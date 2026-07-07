@@ -4,9 +4,15 @@ import { FM02 } from './FM02'
 import { FM03 } from './FM03'
 import { FM04 } from './FM04'
 import { FM05 } from './FM05'
+import { CT01 } from './CT01'
+import { CT02 } from './CT02'
 import { CT03 } from './CT03'
+import { CT04 } from './CT04'
+import { CT05 } from './CT05'
+import { CT06 } from './CT06'
+import { CT07 } from './CT07'
 import { ST02 } from './ST02'
 import { PH01 } from './PH01'
 
 // Seed rules register here as they land (Tasks 8-13).
-export const rules: Rule[] = [FM01, FM02, FM03, FM04, FM05, CT03, ST02, PH01]
+export const rules: Rule[] = [FM01, FM02, FM03, FM04, FM05, CT01, CT02, CT03, CT04, CT05, CT06, CT07, ST02, PH01]

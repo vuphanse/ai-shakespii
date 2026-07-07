@@ -51,3 +51,14 @@ test('mergeProfile deep-merges and replaces arrays wholesale', () => {
 test('loadProfile throws on malformed shape', () => {
   expect(() => loadProfile(join(import.meta.dir, 'no-such.yaml'))).toThrow()
 })
+
+test('anatomy levels mirror the CT-rule severities (spec §8)', () => {
+  const p = loadProfile(PROFILE_PATH)
+  const pairs: Array<[string, string]> = [
+    ['intent', 'CT06'], ['inputs', 'CT04'], ['preconditions', 'CT01'],
+    ['procedure', 'CT07'], ['output', 'CT02'], ['examples', 'CT03'], ['anti-patterns', 'CT05'],
+  ]
+  for (const [key, ruleId] of pairs) {
+    expect(resolveRule(p.rules[ruleId]).severity).toBe(p.anatomy[key].level)
+  }
+})

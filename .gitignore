@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+
+# Runtime (language undecided — see docs/ROADMAP.md open decisions)
+node_modules/
+dist/
+build/
+coverage/
+__pycache__/
+*.pyc
+.venv/
+.env

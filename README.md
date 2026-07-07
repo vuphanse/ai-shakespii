@@ -8,6 +8,16 @@ Most prompt tools focus on writing better prompts. ai-shakespii focuses on desig
 
 **M2 shipped — the MVP CLI is runnable.** `git clone` + `bun install` + `bun link` gives you `shakespii init` and `shakespii lint` (six seed rules, pretty + `--json` output). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M2.5 (the `using-shakespii` companion skill).
 
+## Install the companion skill
+
+`skills/using-shakespii/` teaches agents to drive this CLI — the audit loop and the
+authoring loop. Install it by symlinking into your live skills directory:
+
+    ln -s "$(pwd)/skills/using-shakespii" ~/.claude/skills/using-shakespii
+
+Run it from the repo root. Uninstall by removing the link:
+`rm ~/.claude/skills/using-shakespii`. The repo copy stays the source of truth.
+
 ## What this will be
 
 A CLI (`shakespii`) that operates on standard Agent Skills (`SKILL.md` format):

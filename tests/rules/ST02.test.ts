@@ -26,3 +26,9 @@ test('existing file, directory target, and pure anchor all pass', () => {
 test('minimal-pass: zero findings', () => {
   expect(ST02.check(fx('minimal-pass'), CTX)).toHaveLength(0)
 })
+
+test('malformed %-sequence in link target: degrades to a missing-target finding instead of throwing', () => {
+  const f = ST02.check(fx('st02-malformed-percent'), CTX)
+  expect(f).toHaveLength(1)
+  expect(f[0].message).toContain('images/95%-confidence.png')
+})

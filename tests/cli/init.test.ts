@@ -44,6 +44,15 @@ test('--description replaces only the description placeholder', () => {
   expect(skillMd.match(/TODO\(shakespii\):/g)?.length).toBe(7) // frontmatter placeholder gone, 7 body ones remain
 })
 
+test('--description with $-replacement patterns is inserted literally', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'shakespii-init-'))
+  const r = run(['init', 'demo-skill', '--description', 'Use when computing $$ totals and $& patterns.'], cwd)
+  expect(r.exitCode).toBe(0)
+  const skillMd = readFileSync(join(cwd, 'demo-skill/SKILL.md'), 'utf8')
+  const line = skillMd.split('\n').find(l => l.startsWith('description: '))
+  expect(line).toBe('description: "Use when computing $$ totals and $& patterns."')
+})
+
 test('unknown command and missing args: exit 2', () => {
   const cwd = mkdtempSync(join(tmpdir(), 'shakespii-init-'))
   expect(run(['bogus'], cwd).exitCode).toBe(2)

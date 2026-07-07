@@ -11,9 +11,9 @@ export function formatPretty(skillDir: string, findings: Finding[]): string {
     byFile.set(f.file, list)
   }
   const lines: string[] = []
-  for (const [file, fs] of byFile) {
+  for (const [file, fileFindings] of byFile) {
     lines.push(pc.underline(join(skillDir, file)))
-    for (const f of fs) {
+    for (const f of fileFindings) {
       const loc = f.line === null ? '' : `${f.line}:1`
       const sev = f.severity === 'error' ? pc.red('error') : pc.yellow('warn ')
       lines.push(`  ${loc.padStart(6)}  ${sev}  ${f.message}  ${pc.dim(f.ruleId)}`)

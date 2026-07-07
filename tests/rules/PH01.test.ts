@@ -24,3 +24,9 @@ test('two tokens on one line produce two findings', () => {
 test('minimal-pass: zero findings', () => {
   expect(PH01.check(fx('minimal-pass'), CTX)).toHaveLength(0)
 })
+
+test('empty token: returns immediately with no findings (no infinite loop)', () => {
+  const skill = fx('minimal-pass')
+  const emptyTokenCtx = { options: { token: '' }, anatomy: {} }
+  expect(PH01.check(skill, emptyTokenCtx)).toEqual([])
+})

@@ -5,6 +5,7 @@ export const PH01: Rule = {
   check(skill, ctx) {
     const token = String(ctx.options['token'] ?? 'TODO(shakespii):')
     const out: RuleFinding[] = []
+    if (token === '') return out
     const scan = (file: string, text: string): void => {
       text.split('\n').forEach((ln, i) => {
         let idx = ln.indexOf(token)

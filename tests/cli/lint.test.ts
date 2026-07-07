@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { join } from 'node:path'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 
 const CLI = join(import.meta.dir, '../../src/cli/index.ts')
@@ -56,4 +56,17 @@ test('not a skill: exit 2, message on stderr', () => {
   const r = run(['lint', empty])
   expect(r.exitCode).toBe(2)
   expect(r.stderr.toString()).toContain('no SKILL.md')
+})
+
+test('broken symlink inside skill dir: exit 2, "lint failed" on stderr, no stack trace on stdout', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-dangling-'))
+  writeFileSync(
+    join(dir, 'SKILL.md'),
+    '---\nname: dangling-symlink\ndescription: "Use when testing dangling symlinks."\n---\n# dangling-symlink\n\nBody.\n',
+  )
+  symlinkSync('/nonexistent-target-xyz', join(dir, 'dangling'))
+  const r = run(['lint', dir, '--json'])
+  expect(r.exitCode).toBe(2)
+  expect(r.stderr.toString()).toContain('lint failed')
+  expect(r.stdout.toString()).toBe('')
 })

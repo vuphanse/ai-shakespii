@@ -9,7 +9,13 @@ export const ST02: Rule = {
     const out: RuleFinding[] = []
     for (const { target, line } of extractLinks(skill.body.raw, skill.body.lineOffset)) {
       if (SCHEME.test(target) || target.startsWith('#')) continue
-      const clean = decodeURIComponent(target.split('#')[0]).replace(/^\.\//, '').replace(/\/$/, '')
+      let decoded: string
+      try {
+        decoded = decodeURIComponent(target.split('#')[0])
+      } catch {
+        decoded = target.split('#')[0]
+      }
+      const clean = decoded.replace(/^\.\//, '').replace(/\/$/, '')
       if (clean === '') continue
       if (clean.split('/').includes('..')) {
         out.push({ message: `link target "${target}" escapes the skill directory (contains ../)`, file: 'SKILL.md', line })

@@ -14,7 +14,7 @@ function copyTemplate(src: string, dest: string, name: string, description?: str
     }
     let text = readFileSync(s, 'utf8').replaceAll('{{name}}', name)
     if (description !== undefined && entry.name === 'SKILL.md') {
-      text = text.replace(/^description: ".*"$/m, `description: ${JSON.stringify(description)}`)
+      text = text.replace(/^description: ".*"$/m, () => `description: ${JSON.stringify(description)}`)
     }
     writeFileSync(d, text)
   }

@@ -28,12 +28,17 @@ export function runLint(argv: string[]): number {
     console.error(`profile unreadable: ${(e as Error).message}`)
     return 2
   }
-  const skill = parseSkill(dir)
-  const findings = runRules(skill, profile)
-  if (json) {
-    console.log(JSON.stringify(jsonReport(skill, profile.profile, findings), null, 2))
-  } else {
-    console.log(formatPretty(dir, findings))
+  try {
+    const skill = parseSkill(dir)
+    const findings = runRules(skill, profile)
+    if (json) {
+      console.log(JSON.stringify(jsonReport(skill, profile.profile, findings), null, 2))
+    } else {
+      console.log(formatPretty(dir, findings))
+    }
+    return findings.some(f => f.severity === 'error') ? 1 : 0
+  } catch (e) {
+    console.error(`lint failed: ${(e as Error).message}`)
+    return 2
   }
-  return findings.some(f => f.severity === 'error') ? 1 : 0
 }

@@ -22,6 +22,13 @@ Milestones are sequential; each ends with something runnable or decided. TDD thr
 - [ ] `shakespii lint <path>` with seed rules FM01, FM02, FM04, CT03, ST02 — ESLint-style output, each finding cites its rule ID
 - [ ] Calibration run against the dogfood corpus (`~/.claude/skills/` + superpowers 6.1.1); tune until findings match the audit
 
+## M2.5 — `using-shakespii` companion skill
+
+Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instruct agents; agents drive the CLI. The thin operational skill ships with the MVP, not at M5.
+
+- [ ] Companion skill teaching agents the audit loop (`lint --corpus` → interpret findings → fix → re-lint) and the authoring loop (init → draft → lint-loop until clean → evals → present)
+- [ ] Dogfood: the companion skill itself passes `shakespii lint` and ships its own evals
+
 ## M3 — Full rule catalog
 
 - [ ] Remaining FM/CT/ST/HY rules from LINT-RULES.md

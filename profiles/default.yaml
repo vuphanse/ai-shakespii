@@ -1,0 +1,75 @@
+# profiles/default.yaml — shakespii default lint profile
+# Adjudicated choices are pinned to the reference-corpus vintages they were
+# calibrated against (see docs/REFERENCE-SKILL-CRITIQUE.md, "pinned authorities").
+profile: default
+provenance:
+  superpowers: 6.1.1          # description style, size furniture, ST05 pattern
+  skill-creator: 2026-07      # eval schemas, trigger-accuracy design
+  audit: docs/AUDIT-2026-07-07.md
+
+anatomy:
+  intent:
+    canonical: Intent
+    aliases: [Overview, Purpose, Why]
+    level: warn               # CT06
+  inputs:
+    canonical: Inputs
+    aliases: [Arguments, Parameters]
+    level: warn               # CT04
+  preconditions:
+    canonical: Preconditions
+    aliases: [Requirements, Prerequisites, Dependencies]
+    level: error              # CT01
+  procedure:
+    canonical: Procedure
+    aliases: [Process, The Process, Workflow, Steps, Checklist, Usage]
+    level: error              # CT07
+  output:
+    canonical: Output
+    aliases: [Output contract, Output format, Deliverable, Handback, Report format]
+    level: error              # CT02
+  examples:
+    canonical: Examples
+    aliases: [Example, Worked example, Before/After]
+    level: error              # CT03
+  anti-patterns:
+    canonical: Anti-patterns
+    aliases: [Common Mistakes, Red Flags, Pitfalls, When NOT to Use]
+    level: warn               # CT05
+
+rules:
+  # FM — frontmatter
+  FM01: error                 # frontmatter well-formed; unknown fields warned
+  FM02: error                 # name discipline, = dir name
+  FM03: { severity: warn, options: { warnChars: 500, maxChars: 1024 } }
+  FM04: error                 # trigger-first third-person description
+  FM05: error                 # version required, semver — D4 flagship
+  # CT — content contract (severities mirror the anatomy table above)
+  CT01: error                 # preconditions enumerate every external dependency
+  CT02: error                 # output contract resolvable inside the skill dir
+  CT03: error                 # ≥1 concrete worked example
+  CT04: warn                  # inputs declared
+  CT05: warn                  # anti-patterns / failure modes present
+  CT06: warn                  # intent present (new)
+  CT07: error                 # procedure present (new)
+  # ST — structure
+  ST01: { severity: warn, options: { maxWords: 2000, maxLines: 500, hardMaxWords: 3000 } }
+  ST02: error                 # referenced sibling files exist; one level deep; no ../
+  ST03: { severity: warn, options: { tocMinLines: 100 } }
+  ST04: error                 # no @-prefixed force-load links
+  ST05: warn                  # Iron-Law blocks require rationalization table + red flags
+  # HY — hygiene
+  HY01: error                 # forward-slash paths only
+  HY02: error                 # no machine-specific absolute paths
+  HY03: warn                  # no time-sensitive phrasing outside Old-patterns blocks
+  HY04: warn                  # rot-prone embedded facts need version + last-reviewed
+  HY05: warn                  # executable commands inside code fences
+  HY06: warn                  # quantitative claims eval-backed or marked unverified
+  # XS — cross-skill (require --corpus context)
+  XS01: { severity: warn, options: { minLines: 15, minSkills: 2 } }
+  XS02: { severity: warn, options: { similarity: 0.8 } }   # calibrate in M3 vs kickoff-clone evidence
+  # TR — trigger & eval (harness-backed)
+  TR01: { severity: warn, options: { minCases: 3 } }
+  TR02: { severity: warn, options: { minQueries: 16, requireNearMissNegatives: true } }
+  # PH — placeholders
+  PH01: { severity: error, options: { token: "TODO(shakespii):" } }

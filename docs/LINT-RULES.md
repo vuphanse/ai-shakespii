@@ -23,6 +23,10 @@ Rules are pure functions over a parsed skill: `(frontmatter, section AST, siblin
 | CT03 | error | At least one concrete input→output worked example (trigger-phrase lists don't count) | Audit S4: 10/13 personal skills lack one |
 | CT04 | warn | Inputs declared (what the skill consumes, which are optional) | No skill in either corpus declares inputs |
 | CT05 | warn | Anti-patterns / failure-modes section present | Strongest skills have it; weakest don't |
+| CT06 | warn | Intent section present (canonical `## Intent`; aliases: Overview, Purpose, Why) | Reference corpus universally opens with `## Overview` + bolded `Core principle:` (audit Part 2); a skill with no stated intent can't be reviewed for single responsibility |
+| CT07 | error | Procedure section present (aliases: Process, The Process, Workflow, Steps, Checklist, Usage) | Every audited skill is procedural; the standout (ai-whisper-plan-execution) is praised precisely for explicit gating and procedure (audit Part 1). Generous alias set keeps error defensible; M2 calibration may demote |
+
+Section presence for CT01–CT07 is matched via the anatomy alias table in `profiles/default.yaml` (canonical heading + aliases + level), per the M1 spec (docs/specs/2026-07-07-m1-phase1-specification-design.md §1).
 
 ## ST — Structure
 
@@ -52,6 +56,12 @@ Rules are pure functions over a parsed skill: `(frontmatter, section AST, siblin
 | XS01 | warn | Duplicate-block detection: >15 identical lines shared across ≥2 skills → extract to a shared reference | ~70-line collab-readiness block × 5 ai-whisper skills |
 | XS02 | warn | Near-clone detection: body similarity above threshold → suggest parameterizing into one skill | The 5 kickoff skills share ~80% of their bodies |
 
+## PH — Placeholders
+
+| ID | Severity | Rule | Evidence |
+|---|---|---|---|
+| PH01 | error | No unfilled scaffold placeholders: the literal token `TODO(shakespii):` anywhere in SKILL.md (frontmatter values and body) or sibling scaffold files | RED-by-design scaffold decision (M1 spec §3.5): without PH01 an unedited scaffold is installable and lint-clean stops meaning authored |
+
 ## TR — Trigger & eval (harness-backed, not static)
 
 | ID | Severity | Rule | Evidence |
@@ -61,4 +71,4 @@ Rules are pure functions over a parsed skill: `(frontmatter, section AST, siblin
 
 ## Seed set for MVP
 
-FM01, FM02, FM04, CT03, ST02 — highest signal, fully static, real offenders in the dogfood corpus to test against.
+FM01, FM02, FM04, CT03, ST02, PH01 — highest signal, fully static, real offenders in the dogfood corpus to test against. PH01 is in the seed set because without it the init→lint RED loop doesn't exist at MVP (M1 spec §3.4).

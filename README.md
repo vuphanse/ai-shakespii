@@ -31,6 +31,11 @@ The differentiator is **enforcement**: the ecosystem already has skill-writing g
 
 Canonical copies of these documents live in `~/.ai-pref-nsync/local-docs/ai-shakespii/`; the in-repo `docs/` files are synced mirrors.
 
+## Machine-readable artifacts (spec-as-data)
+
+- `profiles/default.yaml` — the default lint profile: anatomy alias table, rule severities and options, provenance vintages. Loaded verbatim by the CLI from M2 on; no threshold or alias lives in code.
+- `templates/skill/` — the literal scaffold `shakespii init` copies (RED-by-design `TODO(shakespii):` placeholders).
+
 ## Guiding principle
 
 > The goal is not to create clever prompts. The goal is to build reliable, reusable engineering skills that can be shared across projects and teams.

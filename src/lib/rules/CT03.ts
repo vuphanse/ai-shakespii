@@ -28,7 +28,7 @@ function stripQuotedListItems(text: string): string {
     .filter(ln => {
       const m = /^\s*(?:[-*+]|\d+\.)\s+(.*)$/.exec(ln)
       if (!m) return true
-      return !/^["'""''`].*["'""''`]$/.test(m[1].trim())
+      return !/^["'""''`][^"'""''`]*["'""''`]$/.test(m[1].trim())
     })
     .join('\n')
 }

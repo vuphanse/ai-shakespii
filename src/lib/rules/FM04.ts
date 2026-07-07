@@ -1,7 +1,7 @@
 import type { Rule, RuleFinding } from '../types'
 import { fieldLine } from './frontmatter-util'
 
-const FIRST_PERSON = [/\bI\b/, /\b(my|me|we|our|mine|us)\b/i]
+const FIRST_PERSON = [/(?<![\w/])I(?![\w/])/, /\b(my|me|we|our|mine|us)\b/i]
 
 export const FM04: Rule = {
   id: 'FM04',

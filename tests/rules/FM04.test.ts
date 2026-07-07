@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test'
 import { join } from 'node:path'
 import { parseSkill } from '../../src/lib/parser'
 import { FM04 } from '../../src/lib/rules/FM04'
+import { cleanSkillRaw, ctxFor, skillFromRaw } from '../helpers/skill'
 
 const CTX = {
   options: { triggerPatterns: ['use when', 'use for', 'use if', 'use this', 'invoke when', 'when the user'] },
@@ -46,4 +47,16 @@ test('absent description: zero findings (FM01 territory)', () => {
 
 test('minimal-pass: zero findings', () => {
   expect(FM04.check(fx('minimal-pass'), CTX)).toHaveLength(0)
+})
+
+test('"I/O" in the description is not first person', () => {
+  const raw = cleanSkillRaw({ description: 'Use when handling file I/O in a build script.' })
+  expect(FM04.check(skillFromRaw(raw), ctxFor('FM04'))).toHaveLength(0)
+})
+
+test('pronoun I still fires', () => {
+  const raw = cleanSkillRaw({ description: 'Use when I need to summarize a thread.' })
+  const f = FM04.check(skillFromRaw(raw), ctxFor('FM04'))
+  expect(f).toHaveLength(1)
+  expect(f[0].message).toContain('third person')
 })

@@ -18,7 +18,8 @@ import { ST04 } from './ST04'
 import { ST05 } from './ST05'
 import { HY01 } from './HY01'
 import { HY02 } from './HY02'
+import { HY03 } from './HY03'
 import { PH01 } from './PH01'
 
 // Seed rules register here as they land (Tasks 8-13).
-export const rules: Rule[] = [FM01, FM02, FM03, FM04, FM05, CT01, CT02, CT03, CT04, CT05, CT06, CT07, ST01, ST02, ST03, ST04, ST05, HY01, HY02, PH01]
+export const rules: Rule[] = [FM01, FM02, FM03, FM04, FM05, CT01, CT02, CT03, CT04, CT05, CT06, CT07, ST01, ST02, ST03, ST04, ST05, HY01, HY02, HY03, PH01]

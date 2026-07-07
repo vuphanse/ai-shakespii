@@ -251,7 +251,9 @@ export function cleanSkillRaw(overrides: Partial<Record<string, string>> = {}): 
 import { cleanSkillRaw, ctxFor, skillFromRaw } from '../helpers/skill'
 
 test('quoted input→output one-liner counts as a worked example', () => {
-  const raw = cleanSkillRaw({ examples: '- "report.pdf" → "the extracted tables as CSV"' })
+  // The example must carry an input marker ("given") — CT03's marker logic is
+  // unchanged by this fix; only the over-eager stripping is corrected.
+  const raw = cleanSkillRaw({ examples: '- "given report.pdf" → "the extracted tables as CSV"' })
   expect(CT03.check(skillFromRaw(raw), ctxFor('CT03'))).toHaveLength(0)
 })
 

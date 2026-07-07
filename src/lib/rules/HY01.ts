@@ -1,7 +1,10 @@
 import type { Rule, RuleFinding } from '../types'
 
 const DRIVE = /[A-Za-z]:\\/
-const BACKSLASH_CHAIN = /\w+\\{1,2}\w+\\{1,2}\w+/
+// A backslash immediately followed by "_" is the CommonMark escape for a literal underscore
+// (stops `_..._` italics parsing), not a Windows path separator — exclude it so escaped
+// identifiers like `signature\_date\_signed` don't chain into a false path match.
+const BACKSLASH_CHAIN = /\w+(?:\\(?!_)){1,2}\w+(?:\\(?!_)){1,2}\w+/
 
 export const HY01: Rule = {
   id: 'HY01',

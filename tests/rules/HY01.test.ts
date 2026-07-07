@@ -28,3 +28,16 @@ test('md sibling scanned; forward-slash paths silent', () => {
   expect(f).toHaveLength(1)
   expect(f[0].file).toBe('references/win.md')
 })
+
+// M3 calibration (docs/CALIBRATION-M3.md): markdown-escaped underscores (`field\_name`, used to
+// stop `_..._` italics parsing) chain like a Windows path but aren't one — real corpus false
+// positive in superpowers' anthropic-best-practices.md.
+test('markdown-escaped underscores stay silent (not a path)', () => {
+  const raw = cleanSkillRaw({ procedure: 'Fields: signature\\_date\\_signed, order\\_total.' })
+  expect(HY01.check(skillFromRaw(raw), CTX)).toHaveLength(0)
+})
+
+test('a real backslash chain still fires when a segment contains an underscore', () => {
+  const raw = cleanSkillRaw({ procedure: 'Open docs\\my_folder\\file.md next.' })
+  expect(HY01.check(skillFromRaw(raw), CTX)).toHaveLength(1)
+})

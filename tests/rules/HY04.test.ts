@@ -31,3 +31,23 @@ test('version alone (no marker) does not exempt', () => {
 test('stats inside fences stay silent', () => {
   expect(HY04.check(skillFromRaw(statBody('```\n185K installs\n```')), CTX)).toHaveLength(0)
 })
+
+// M3 calibration (docs/CALIBRATION-M3.md): ordered-list markers ("2.") and "Step N:" headings
+// collided with nearby rot nouns on real corpus skills — 9 false positives across 4 skills.
+test('leading ordered-list marker near a rot noun stays silent', () => {
+  expect(HY04.check(skillFromRaw(statBody('2. Waiting on user input.')), CTX)).toHaveLength(0)
+})
+
+test('numbered heading ("### 2. Title") near a rot noun stays silent', () => {
+  expect(HY04.check(skillFromRaw(statBody('### 2. Waiting on user input')), CTX)).toHaveLength(0)
+})
+
+test('"Step N:" heading number near a rot noun stays silent', () => {
+  expect(HY04.check(skillFromRaw(statBody('### Step 5: Present Options to the User')), CTX)).toHaveLength(0)
+})
+
+test('a real stat still fires on a line that also carries a list marker', () => {
+  const f = HY04.check(skillFromRaw(statBody('1. It has 205K installs today.')), CTX)
+  expect(f).toHaveLength(1)
+  expect(f[0].message).toContain('"205K" near "installs"')
+})

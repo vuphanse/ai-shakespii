@@ -67,7 +67,7 @@ export function extractLinks(
     position?: { start: { line: number } }
     children?: unknown[]
   }) => {
-    if ((n.type === 'link' || n.type === 'image') && typeof n.url === 'string') {
+    if ((n.type === 'link' || n.type === 'image' || n.type === 'definition') && typeof n.url === 'string') {
       out.push({ target: n.url, line: (n.position?.start.line ?? 1) + lineOffset - 1 })
     }
     for (const c of n.children ?? []) walk(c as typeof n)

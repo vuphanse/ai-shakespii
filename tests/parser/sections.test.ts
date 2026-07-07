@@ -49,3 +49,9 @@ test('extractLinks returns relative targets with absolute lines', () => {
     { target: 'assets/a.png', line: 11 },
   ])
 })
+
+test('extractLinks includes reference-style link definitions', () => {
+  const body = 'See [guide][g] for details.\n\n[g]: references/guide.md'
+  const links = extractLinks(body, 1)
+  expect(links).toContainEqual({ target: 'references/guide.md', line: 3 })
+})

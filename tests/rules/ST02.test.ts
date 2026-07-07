@@ -44,3 +44,24 @@ test('existing EMPTY directory target passes (git cannot commit empty dirs, so b
   mkdirSync(join(dir, 'assets'))
   expect(ST02.check(parseSkill(dir), CTX)).toHaveLength(0)
 })
+
+test('reference-style link to a missing file is a finding', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-reflink-'))
+  writeFileSync(
+    join(dir, 'SKILL.md'),
+    '---\nname: reflink\ndescription: "Use when testing reference links."\n---\n# reflink\n\nSee [guide][g].\n\n[g]: references/missing.md\n',
+  )
+  const f = ST02.check(parseSkill(dir), { options: {}, anatomy: {} })
+  expect(f).toHaveLength(1)
+  expect(f[0].message).toContain('references/missing.md')
+})
+
+test('fragment on an existing sibling resolves (file.md#fragment)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-frag-'))
+  writeFileSync(
+    join(dir, 'SKILL.md'),
+    '---\nname: frag\ndescription: "Use when testing fragment links."\n---\n# frag\n\nSee [s](guide.md#section).\n',
+  )
+  writeFileSync(join(dir, 'guide.md'), '# guide\n\n## section\n')
+  expect(ST02.check(parseSkill(dir), { options: {}, anatomy: {} })).toHaveLength(0)
+})

@@ -26,8 +26,8 @@ Milestones are sequential; each ends with something runnable or decided. TDD thr
 
 Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instruct agents; agents drive the CLI. The thin operational skill ships with the MVP, not at M5.
 
-- [ ] Companion skill teaching agents the audit loop (`lint --corpus` → interpret findings → fix → re-lint) and the authoring loop (init → draft → lint-loop until clean → evals → present)
-- [ ] Dogfood: the companion skill itself passes `shakespii lint` and ships its own evals
+- [x] Companion skill teaching agents the audit loop (`shakespii lint` per skill → interpret findings → fix → re-lint) and the authoring loop (init → draft → lint-loop until clean → evals → present) — corpus-wide lint arrives with `--corpus` in M3
+- [x] Dogfood: the companion skill itself passes `shakespii lint` (zero findings, weld-tested) and ships its own evals
 
 ## M3 — Full rule catalog
 

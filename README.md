@@ -6,7 +6,7 @@ Most prompt tools focus on writing better prompts. ai-shakespii focuses on desig
 
 ## Status
 
-**M2 shipped — the MVP CLI is runnable.** `git clone` + `bun install` + `bun link` gives you `shakespii init` and `shakespii lint` (six seed rules, pretty + `--json` output). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M2.5 (the `using-shakespii` companion skill).
+**M2.5 shipped — the companion skill is live.** `git clone` + `bun install` + `bun link` gives you `shakespii init` and `shakespii lint` (six seed rules, pretty + `--json` output), and `skills/using-shakespii/` teaches agents to drive them (see the install section below). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M3 (the full rule catalog).
 
 ## Install the companion skill
 

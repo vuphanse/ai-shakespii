@@ -74,16 +74,18 @@ Authoring branch — create a new skill:
 
 ## Examples
 
-Audit, end to end. The user says: "Lint my skill at `~/.claude/skills/caveman` and
-fix what it finds."
+Audit, end to end. The user says: "Lint my skill at `~/.claude/skills/summarize-notes`
+and fix what it finds."
 
-Input: `shakespii lint ~/.claude/skills/caveman --json` exits 1 with one finding —
-`ruleId` FM04, severity error, file `SKILL.md`, line 3, message "description must
-lead with a trigger phrase".
+Input: `shakespii lint ~/.claude/skills/summarize-notes --json` exits 1 with one
+finding — `ruleId` FM04, severity error, file `SKILL.md`, line 3, message
+"description must begin with a trigger phrase (one of: use when, use for, use if,
+use this, invoke when, when the user)".
 
 The agent opens the FM04 entry in the remediation reference and rewrites the
-description from "Compresses chat output to save tokens" to "Use when the user asks
-for compressed, token-efficient replies…", changing nothing else.
+description from "Compresses long chat threads into short bullet summaries" to "Use
+when the user asks to summarize a long chat thread into short bullets", changing
+nothing else.
 
 Output: the re-lint exits 0 with zero findings, and the agent reports "1 error → 0
 findings; FM04 fixed by rewording the description trigger-first", listing no

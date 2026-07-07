@@ -1,6 +1,6 @@
 # M1 — Phase-1 Specification design
 
-**Date:** 2026-07-07 · **Status:** approved in brainstorm, pending spec review
+**Date:** 2026-07-07 · **Status:** implemented — exit criteria verified 2026-07-07
 **Milestone:** M1 (docs/ROADMAP.md) — skill anatomy spec, default lint profile, scaffold template design
 **Depends on:** STRATEGY.md D1–D5, LINT-RULES.md v0, AUDIT-2026-07-07.md, REFERENCE-SKILL-CRITIQUE.md
 
@@ -309,11 +309,11 @@ Canonical spec copy: `~/.ai-pref-nsync/local-docs/ai-shakespii/specs/` (docs wor
 
 ## Exit criteria
 
-- [ ] This spec committed (repo mirror + canonical copy).
-- [ ] `profiles/default.yaml` exists in the repo exactly as specified in section 2.
-- [ ] `templates/skill/` exists in the repo exactly as specified in section 3.
-- [ ] LINT-RULES.md, ROADMAP.md, README.md amendments applied.
-- [ ] Consistency pass: every profile rule ↔ catalog entry; every scaffold placeholder maps to a backing rule.
+- [x] This spec committed (repo mirror + canonical copy).
+- [x] `profiles/default.yaml` exists in the repo exactly as specified in section 2.
+- [x] `templates/skill/` exists in the repo exactly as specified in section 3.
+- [x] LINT-RULES.md, ROADMAP.md, README.md amendments applied.
+- [x] Consistency pass: every profile rule ↔ catalog entry; every scaffold placeholder maps to a backing rule.
 
 ## Out of scope for M1
 

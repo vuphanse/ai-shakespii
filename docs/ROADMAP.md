@@ -10,9 +10,9 @@ Milestones are sequential; each ends with something runnable or decided. TDD thr
 
 ## M1 — Phase-1 specification
 
-- [ ] Skill anatomy spec: map Intent / Inputs / Preconditions / Procedure / Output / Examples / Anti-patterns onto standard SKILL.md section conventions (exact heading names, required vs optional)
-- [ ] Default lint profile: finalize the adjudications in STRATEGY.md D4 (description style, size budget, version requirement) as concrete config
-- [ ] Scaffold template design for `shakespii init` (SKILL.md skeleton + `evals/evals.json` stub + README)
+- [x] Skill anatomy spec: map Intent / Inputs / Preconditions / Procedure / Output / Examples / Anti-patterns onto standard SKILL.md section conventions (exact heading names, required vs optional)
+- [x] Default lint profile: finalize the adjudications in STRATEGY.md D4 (description style, size budget, version requirement) as concrete config
+- [x] Scaffold template design for `shakespii init` (SKILL.md skeleton + `evals/evals.json` stub + README)
 
 ## M2 — MVP CLI
 

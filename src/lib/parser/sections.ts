@@ -75,3 +75,27 @@ export function extractLinks(
   walk(parseTree(body) as unknown as { children?: unknown[] })
   return out
 }
+
+/**
+ * Body text with fenced code blocks (``` / ~~~) and inline code spans blanked
+ * out, preserving line positions: fence-block lines become empty, inline code
+ * becomes same-length spaces. Heuristic ST/HY rules scan this, never raw body.
+ */
+export function textOutsideFences(body: string): string {
+  let fence: { char: string; len: number } | null = null
+  return body
+    .split('\n')
+    .map(ln => {
+      const m = /^\s*(`{3,}|~{3,})/.exec(ln)
+      if (fence !== null) {
+        if (m && m[1][0] === fence.char && m[1].length >= fence.len && ln.trim() === m[1]) fence = null
+        return ''
+      }
+      if (m) {
+        fence = { char: m[1][0], len: m[1].length }
+        return ''
+      }
+      return ln.replace(/`[^`\n]+`/g, s => ' '.repeat(s.length))
+    })
+    .join('\n')
+}

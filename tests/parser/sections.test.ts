@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
 import { extractLinks, extractSections, normalizeHeading } from '../../src/lib/parser/sections'
+import { textOutsideFences } from '../../src/lib/parser/sections'
 
 test('normalizeHeading strips emphasis, trailing punctuation, collapses case/space', () => {
   expect(normalizeHeading('**Examples:**')).toBe('examples')
@@ -54,4 +55,27 @@ test('extractLinks includes reference-style link definitions', () => {
   const body = 'See [guide][g] for details.\n\n[g]: references/guide.md'
   const links = extractLinks(body, 1)
   expect(links).toContainEqual({ target: 'references/guide.md', line: 3 })
+})
+
+test('textOutsideFences blanks fenced blocks, preserves line positions', () => {
+  const body = ['before', '```bash', 'git commit -m "x"', '```', 'after'].join('\n')
+  const out = textOutsideFences(body).split('\n')
+  expect(out).toHaveLength(5)
+  expect(out[0]).toBe('before')
+  expect(out[1]).toBe('')
+  expect(out[2]).toBe('')
+  expect(out[3]).toBe('')
+  expect(out[4]).toBe('after')
+})
+
+test('textOutsideFences handles ~~~ fences and unclosed fences', () => {
+  expect(textOutsideFences('~~~\nhidden\n~~~\nvisible').split('\n')[3]).toBe('visible')
+  const unclosed = textOutsideFences('```\nhidden forever').split('\n')
+  expect(unclosed[1]).toBe('')
+})
+
+test('textOutsideFences blanks inline code spans with same-length spaces', () => {
+  const out = textOutsideFences('run `git commit` now')
+  expect(out).toBe('run              now')
+  expect(out.length).toBe('run `git commit` now'.length)
 })

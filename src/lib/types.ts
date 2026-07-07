@@ -35,6 +35,7 @@ export interface ParsedSkill {
   frontmatter: FrontmatterInfo
   body: BodyInfo
   files: FileEntry[]
+  dirs: string[]
 }
 
 export interface AnatomySection {

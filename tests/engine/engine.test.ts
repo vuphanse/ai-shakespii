@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test'
 import { runRulesWith } from '../../src/lib/engine'
 import type { ParsedSkill, Profile, Rule } from '../../src/lib/types'
 
-const SKILL = { dir: '/x', dirName: 'x', raw: '', frontmatter: { raw: null, parsed: null, error: null }, body: { raw: '', lineOffset: 1, h1: null, sections: [] }, files: [] } as ParsedSkill
+const SKILL = { dir: '/x', dirName: 'x', raw: '', frontmatter: { raw: null, parsed: null, error: null }, body: { raw: '', lineOffset: 1, h1: null, sections: [] }, files: [], dirs: [] } as ParsedSkill
 
 const PROFILE = {
   profile: 'test',

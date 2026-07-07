@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test'
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { walkInventory } from '../../src/lib/parser/inventory'
+import { walkDirs, walkInventory } from '../../src/lib/parser/inventory'
 
 function makeTree(): string {
   const dir = mkdtempSync(join(tmpdir(), 'shakespii-inv-'))
@@ -13,6 +13,7 @@ function makeTree(): string {
   writeFileSync(join(dir, 'bin.dat'), Buffer.from([0x41, 0x00, 0x42]))
   mkdirSync(join(dir, '.git'))
   writeFileSync(join(dir, '.git', 'HEAD'), 'ref: x')
+  mkdirSync(join(dir, 'assets'))   // empty — must still appear in walkDirs
   return dir
 }
 
@@ -22,4 +23,8 @@ test('walkInventory: excludes SKILL.md and .git, loads text, nulls binary', () =
   expect(entries.find(e => e.relPath === 'README.md')?.text).toBe('readme text')
   expect(entries.find(e => e.relPath === 'bin.dat')?.text).toBeNull()
   expect(entries.find(e => e.relPath === 'evals/evals.json')?.text).toBe('{}')
+})
+
+test('walkDirs: records directories including empty ones, skips .git', () => {
+  expect(walkDirs(makeTree())).toEqual(['assets', 'evals'])
 })

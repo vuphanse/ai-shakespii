@@ -1,4 +1,6 @@
 import { expect, test } from 'bun:test'
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseSkill } from '../../src/lib/parser'
 import { ST02 } from '../../src/lib/rules/ST02'
@@ -31,4 +33,14 @@ test('malformed %-sequence in link target: degrades to a missing-target finding 
   const f = ST02.check(fx('st02-malformed-percent'), CTX)
   expect(f).toHaveLength(1)
   expect(f[0].message).toContain('images/95%-confidence.png')
+})
+
+test('existing EMPTY directory target passes (git cannot commit empty dirs, so build at test time)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'st02-empty-dir-'))
+  writeFileSync(
+    join(dir, 'SKILL.md'),
+    '---\nname: st02-empty-dir\ndescription: "Use when testing empty directory targets."\n---\n# st02-empty-dir\n\nSee [assets](assets/).\n',
+  )
+  mkdirSync(join(dir, 'assets'))
+  expect(ST02.check(parseSkill(dir), CTX)).toHaveLength(0)
 })

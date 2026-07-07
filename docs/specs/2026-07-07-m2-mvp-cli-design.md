@@ -85,6 +85,7 @@ type ParsedSkill = {
     sections: Section[]
   }
   files: FileEntry[]          // sibling inventory
+  dirs: string[]              // sibling directory relPaths, including empty directories — ST02 resolves directory link targets against this
 }
 
 type Section = {
@@ -105,7 +106,7 @@ Semantics:
 - **Sections are flat, not nested.** A section's text ends at the next h2 or h3 regardless of depth relationship. h1 and h4+ headings never create sections; their text belongs to the enclosing section's span.
 - **Line fidelity:** remark positions are body-relative; the parser adds `body.lineOffset` so every `Section.startLine` and every finding line is absolute in SKILL.md.
 - **Anatomy-agnostic:** the parser extracts *all* h2/h3 sections; matching against the profile's alias table happens in the rules layer. Anatomy changes are profile edits, never parser edits.
-- **Inventory:** recursive walk of the skill dir, excluding `.git`, depth capped at 5; `SKILL.md` itself is excluded from `files`. The walk loads each file's `text` so rules stay disk-free; `text` is `null` for binary or oversized files (>1 MB, or a NUL byte in the first 8 KB).
+- **Inventory:** recursive walk of the skill dir, excluding `.git`, depth capped at 5; `SKILL.md` itself is excluded from `files`. The walk loads each file's `text` so rules stay disk-free; `text` is `null` for binary or oversized files (>1 MB, or a NUL byte in the first 8 KB). Directories are recorded separately in `dirs` — including empty ones, which carry no `FileEntry` — so ST02 can resolve directory link targets without touching disk.
 
 Pipeline: fence split → `yaml.parse` frontmatter → `remark-parse` body → walk mdast headings → slice section text by position → `readdir` inventory. Each step is its own tested pure function; `parseSkill(dir)` composes them. `parseSkill` and the profile loader are the only places lib touches the filesystem, both read-only.
 

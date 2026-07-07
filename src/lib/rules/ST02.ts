@@ -21,7 +21,9 @@ export const ST02: Rule = {
         out.push({ message: `link target "${target}" escapes the skill directory (contains ../)`, file: 'SKILL.md', line })
         continue
       }
-      const exists = skill.files.some(f => f.relPath === clean || f.relPath.startsWith(`${clean}/`))
+      const exists =
+        skill.dirs.includes(clean) ||
+        skill.files.some(f => f.relPath === clean || f.relPath.startsWith(`${clean}/`))
       if (!exists) {
         out.push({ message: `link target "${target}" does not exist in the skill directory`, file: 'SKILL.md', line })
       }

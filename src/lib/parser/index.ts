@@ -3,7 +3,7 @@ import { basename, join, resolve } from 'node:path'
 import type { ParsedSkill } from '../types'
 import { splitFrontmatter } from './frontmatter'
 import { extractSections } from './sections'
-import { walkInventory } from './inventory'
+import { walkDirs, walkInventory } from './inventory'
 
 export { normalizeHeading, extractLinks } from './sections'
 
@@ -19,5 +19,6 @@ export function parseSkill(skillDir: string): ParsedSkill {
     frontmatter: fm,
     body: { raw: body, lineOffset: bodyLineOffset, h1, sections },
     files: walkInventory(dir),
+    dirs: walkDirs(dir),
   }
 }

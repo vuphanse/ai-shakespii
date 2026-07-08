@@ -217,11 +217,16 @@ Per eval case:
    `dir = runDir(cacheRootPath, evalsJson.skill_name, key)`. The run-dir
    name segment is `evals.json`'s `skill_name` (always present and
    frontmatter-consistent in a deterministic-clean suite).
-2. **Cache check**: unless `--fresh`, if `dir/grading.json` exists and
-   parses + validates as GradingJson, the case is a cache hit — no LLM
-   calls; the grading stage replays findings from the file. A missing,
-   unparseable, or invalid `grading.json` is a cache miss (self-healing);
-   the run meta reports `cached: false`.
+2. **Cache check**: unless `--fresh`, if `dir/grading.json` exists,
+   parses, validates as GradingJson, **and** passes the rubric-fidelity
+   check against the current case (§6: expectation texts verbatim, same
+   count, same order), the case is a cache hit — no LLM calls; the grading
+   stage replays findings from the file. A missing, unparseable,
+   schema-invalid, or rubric-mismatched `grading.json` is a cache miss
+   (self-healing); the run meta reports `cached: false`. (Rubric mismatch
+   can only arise from corruption or tampering — `evals/evals.json` is an
+   inventory file, so editing expectations changes `skillContentHash` and
+   lands in a different runKey — but the guard holds regardless.)
 3. **Cold path**: remove `dir` recursively if present, recreate via
    `ensureRunDir`. Create `dir/outputs/` (the executor cwd). Stage:
    - copy the entire skill directory to
@@ -356,9 +361,12 @@ Grading findings (per case, cold or cached replay):
   `eval <id> expectation failed: "<text>" — <evidence truncated to 200
   chars, trailing … when cut>` (file `evals/evals.json`, line null).
 
-Cached replay reads `grading.json`, revalidates, and derives the identical
-findings deterministically — a second `--run` is byte-identical output and
-zero tokens.
+Cached replay reads `grading.json`, revalidates it through the same two
+gates as a live reply — `validateGradingJson` **and** rubric fidelity
+against the current case's expectations — and derives the identical
+findings deterministically; a second `--run` is byte-identical output and
+zero tokens. A cached file failing either gate is a cache miss handled in
+§5 step 2, never a replayed verdict.
 
 Grading stage status: `'fail'` iff at least one error finding, else
 `'pass'`. Cases excluded by executor failure simply don't contribute
@@ -456,7 +464,10 @@ throughout, existing helper):
   results, missing result event, garbage lines.
 - Executor: staging correctness (skill mount, `files` relPath preservation),
   prompt template, cache hit short-circuit, `--fresh` re-run, stale-dir
-  wipe, corrupt-cache self-heal, failure findings, run metadata.
+  wipe, corrupt-cache self-heal, **rubric-mismatch self-heal** (a
+  schema-valid cached `grading.json` whose expectation texts do not match
+  the current eval is treated as a miss and re-run, never replayed),
+  failure findings, run metadata.
 - Grader: prompt template, extraction (fenced/bare), all three gates, retry
   flow, summary recomputation, metrics/timing merge, atomic write, failure
   finding, evidence truncation.

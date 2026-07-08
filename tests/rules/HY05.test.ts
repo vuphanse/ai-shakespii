@@ -35,3 +35,35 @@ test('md siblings are scanned', () => {
   expect(f).toHaveLength(1)
   expect(f[0].file).toBe('references/setup.md')
 })
+
+test('compound command after && fires with the segment message', () => {
+  const f = HY05.check(skillFromRaw(cleanSkillRaw({ procedure: 'cd ~/repo && python3 -m scripts run.py' })), CTX)
+  expect(f).toHaveLength(1)
+  expect(f[0].message).toBe('unfenced command "python3" after a shell operator — executable commands belong in code fences')
+})
+
+test('semicolon-chained command fires', () => {
+  expect(HY05.check(skillFromRaw(cleanSkillRaw({ procedure: 'cd out; bun test tests/a.test.ts' })), CTX)).toHaveLength(1)
+})
+
+test('||-chained command fires', () => {
+  expect(HY05.check(skillFromRaw(cleanSkillRaw({ procedure: 'test -f lockfile || bun install --frozen-lockfile' })), CTX)).toHaveLength(1)
+})
+
+test('cd prose stays silent — cd is not in the command list and a comma is not an operator', () => {
+  expect(HY05.check(skillFromRaw(cleanSkillRaw({ procedure: 'cd to the repo, then run the tests' })), CTX)).toHaveLength(0)
+})
+
+test('command-documenting table rows stay silent — single pipes never split', () => {
+  expect(HY05.check(skillFromRaw(cleanSkillRaw({ procedure: '| git status | shows the working tree |' })), CTX)).toHaveLength(0)
+})
+
+test('prose after a semicolon without command shape stays silent', () => {
+  expect(HY05.check(skillFromRaw(cleanSkillRaw({ procedure: 'Run the loop; git history proves it works' })), CTX)).toHaveLength(0)
+})
+
+test('one finding per line even with two command segments', () => {
+  const f = HY05.check(skillFromRaw(cleanSkillRaw({ procedure: 'git add --all && git commit -m "x"' })), CTX)
+  expect(f).toHaveLength(1)
+  expect(f[0].message).toBe('unfenced command line starting with "git" — executable commands belong in code fences')
+})

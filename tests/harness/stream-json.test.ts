@@ -93,3 +93,41 @@ test('renderTranscript without a result event prints the placeholder', () => {
   const out = renderTranscript({ skillName: 's', evalId: 3, prompt: 'p', events: [] })
   expect(out).toContain('## Result\n\n(no result event)')
 })
+
+// live-shapes.jsonl mirrors event shapes captured from real claude CLI runs during the
+// M4b-1 calibration sweep (docs/CALIBRATION-M4B1.md): rate_limit_event, system subtypes
+// beyond init, assistant thinking blocks, user text blocks, array-content tool_result
+// without is_error, and the full result-event field set (subtype, modelUsage, extra usage keys).
+
+test('live-shapes: extractFinalText and extractUsage tolerate the real result-event field set', async () => {
+  const events = await loadEvents('live-shapes.jsonl')
+  expect(extractFinalText(events)).toBe('Live run complete.')
+  expect(extractUsage(events)).toEqual({ inputTokens: 10, outputTokens: 1174 })
+})
+
+test('live-shapes: deriveMetrics ignores thinking blocks, system subtypes, rate_limit_event, and user text blocks', async () => {
+  const events = await loadEvents('live-shapes.jsonl')
+  const transcript = renderTranscript({ skillName: 'demo', evalId: 9, prompt: 'p', events })
+  expect(deriveMetrics(events, transcript)).toEqual({
+    tool_calls: { ToolSearch: 1, Bash: 1 },
+    total_tool_calls: 2,
+    errors_encountered: 1, // only the is_error:true tool_result; the array-content one has no is_error
+    num_turns: 7,
+    input_tokens: 10,
+    output_tokens: 1174,
+    transcript_chars: transcript.length,
+  })
+})
+
+test('live-shapes: renderTranscript stringifies array tool_result content and skips thinking and user-text blocks', async () => {
+  const events = await loadEvents('live-shapes.jsonl')
+  const out = renderTranscript({ skillName: 'demo', evalId: 9, prompt: 'p', events })
+  expect(out).toContain(
+    '## Tool result\n\n[{"type":"tool_reference","tool_name":"mcp__demo__one"},{"type":"tool_reference","tool_name":"mcp__demo__two"}]',
+  )
+  expect(out).toContain('## Tool result\n\ncommand failed')
+  expect(out).toContain('## Assistant\n\nChecking the tool list.')
+  expect(out).toContain('## Result\n\nLive run complete.')
+  expect(out).not.toContain('OPAQUE-THINKING-SIGNATURE')
+  expect(out).not.toContain('Base directory for this skill')
+})

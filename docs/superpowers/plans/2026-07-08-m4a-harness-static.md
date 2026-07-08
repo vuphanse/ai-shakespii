@@ -674,7 +674,7 @@ const evalsEntry = (doc: unknown): FileEntry => {
 const validDoc = (name = 'test-skill') => ({
   skill_name: name,
   evals: [
-    { id: 1, prompt: 'One.', expected_output: 'Out.', files: [], expectations: ['ok'] },
+    { id: 1, prompt: 'One.', expected_output: 'Out.', files: [] as string[], expectations: ['ok'] },
     { id: 2, prompt: 'Two.', expected_output: 'Out.', expectations: ['ok'] },
     { id: 3, prompt: 'Three.', expected_output: 'Out.', expectations: ['ok'] },
   ],

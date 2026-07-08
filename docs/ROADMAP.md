@@ -48,12 +48,18 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 - [x] Run-dir/cache skeleton (byte-level content hash, per-eval runKey, XDG-aware cache root)
 - [x] First fixture: the repaired compress benchmark (`tests/fixtures/harness/compress`)
 
-## M4b — Test harness, LLM half
+## M4b-1 — Test harness, LLM half: executor + grader (done 2026-07-08)
 
-- [ ] Headless executor scenario runs via `claude -p` (ST04 probe mechanics)
-- [ ] LLM rubric grading writing `grading.json` (M4a validators are the contract); cached per (skill content, eval, model), on-demand
-- [ ] Trigger-accuracy eval (TR02) per skill-creator's design
-- [ ] Benchmark stats (`benchmark.json`, with/without skill) and the `--fresh` flag
+- [x] `ClaudeRunner` boundary: headless `claude -p` scenario runs (stream-json, per-call timeout, CLAUDECODE strip); whole suite tokenless via injected fakes
+- [x] LLM rubric grading writing `grading.json` (M4a validators + rubric-fidelity gate; summary recomputed, atomic write); cached per (skill content, eval, model), on-demand
+- [x] `shakespii test --run [--fresh] [--model <name>]`: scenario/grading stages live, opt-in; cache replay deterministic at zero tokens
+- [x] Calibration sweep (docs/CALIBRATION-M4B1.md): using-shakespii + compress fixture, 8/8 cache proof
+- [x] using-shakespii v0.4.0 teaches the `--run` loop
+
+## M4b-2 — Test harness, LLM half: trigger eval + benchmark
+
+- [ ] Trigger-accuracy eval (TR02) per skill-creator's design (~20 labeled queries incl. near-miss negatives, threshold on held-out split)
+- [ ] Benchmark stats (`benchmark.json`, with/without skill, runs-per-eval > 1, variance)
 - [ ] Live-compress evals sync (user sign-off; attached to the personal-skill-migration decision)
 
 ## M5 — Writer + publishing

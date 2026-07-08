@@ -1,88 +1,98 @@
-# shakespii test harness — contract (M4a substrate)
+# shakespii test harness — contract
 
-Status: M4a shipped (deterministic stage); M4b pending (scenario runs, grading).
-Upstream schema authority: skill-creator `references/schemas.md` (pinned
-evidence, vintage 2026-07 — see profiles/default.yaml provenance).
+Status: M4b-1 shipped (deterministic + scenario + grading stages; scenario
+and grading are opt-in via --run). M4b-2 pending (TR02 trigger eval,
+benchmark stats). Upstream schema authority: skill-creator
+`references/schemas.md` (pinned evidence, vintage 2026-07 — see
+profiles/default.yaml provenance).
 
 ## Stage pipeline
 
-`shakespii test <path> [--json]` runs three registered stages, always in this
-order: `deterministic`, `scenario`, `grading`. In M4a only `deterministic` is
-live; the other two report `status: "unavailable", note: "ships in M4b"` and
-never affect the exit code. M4b implements them as headless `claude -p` runs
-(executor) and LLM rubric grading (grader) writing `grading.json`.
+`shakespii test <path> [--json] [--run] [--fresh] [--model <name>]` runs
+three stages, always in this order: `deterministic`, `scenario`, `grading`.
 
-Exit codes: 0 — no error-severity findings (warnings allowed); 1 — at least
-one error finding; 2 — run error (bad usage, unknown option, unreadable
-target). Nothing else exits 2.
+- Without `--run`, scenario/grading report
+  `status: "skipped", note: "pass --run to execute LLM stages"` and the
+  command is free — no LLM calls, ever. TR01 (lint) delegates to the
+  deterministic stage only; lint never spends tokens.
+- With `--run`, each eval case is executed headlessly (`claude -p`,
+  stream-json, model default `sonnet`, 300s timeout per LLM call) and then
+  graded by a second LLM call. If the deterministic stage produced errors,
+  both LLM stages report `status: "skipped", note: "deterministic stage
+  failed"` — an invalid suite never burns tokens. Deterministic warnings
+  alone do not block.
+- `--fresh` and `--model` require `--run` (usage error, exit 2, otherwise).
+
+Exit codes: 0 — no error findings (warnings allowed); 1 — at least one
+error finding (failed expectations, executor/grader failures included);
+2 — run error only (bad usage, unreadable target, `claude` CLI not
+spawnable, unexpected exception).
+
+**Permissions bypass — accepted risk.** The executor runs
+`claude -p --dangerously-skip-permissions` inside a disposable per-run
+workspace. This is opt-in (`--run`), intended for the user's own trusted
+skills; the workspace cwd is containment by convention, not a sandbox — a
+malicious skill could escape via Bash. Do NOT point `--run` at untrusted
+third-party skills.
 
 ## test-JSON v1
 
 Top-level key order is contractual: `version, mode, skill, stages, summary`.
+Findings: `severity, message, file, line` (no ruleId; schema-path detail is
+folded into `message`). Executed scenario stage: `stage, status, findings,
+runs` with runs entries `evalId, cached, status, durationSeconds`
+(`status` ∈ ok | timeout | nonzero-exit | no-result). Executed grading
+stage: `stage, status, findings, expectations` with `expectations`
+`{passed, total}` counting graded expectations across cold and cached
+cases. Skipped stages: `stage, status, note`. `summary` counts all findings
+across stages.
 
-    {
-      "version": 1,
-      "mode": "test",
-      "skill": { "dir": "<abs path>", "name": "<frontmatter name or null>" },
-      "stages": [
-        { "stage": "deterministic", "status": "pass" | "fail",
-          "findings": [ { "severity": "error" | "warn", "message": "...",
-                          "file": "evals/evals.json", "line": null } ] },
-        { "stage": "scenario", "status": "unavailable", "note": "ships in M4b" },
-        { "stage": "grading",  "status": "unavailable", "note": "ships in M4b" }
-      ],
-      "summary": { "errors": 0, "warnings": 0 }
-    }
+## Executor
 
-Harness findings are NOT lint findings: they carry no `ruleId` (the enclosing
-stage identifies the source) and their key order is `severity, message, file,
-line`. Schema-path detail is folded into `message` (`evals[2].prompt: must be
-a non-empty string`).
+Per eval case (sequential, ascending id): runKey → run dir; cache check;
+cold path stages a workspace (`outputs/`): the skill mounted at
+`outputs/.claude/skills/<skill_name>/`, each eval `files` entry copied at
+its skill-relative path. Prompt: force-load preamble ("Read
+.claude/skills/<name>/SKILL.md first…") plus the eval prompt verbatim —
+scenario evals measure capability with the skill; natural triggering is
+TR02's concern (M4b-2). Executor failures (timeout / nonzero-exit /
+completed with no result event) become scenario error findings; the case
+is not graded and stays uncached.
 
-## Deterministic stage checks (in order)
+## Grader
 
-1. `evals/evals.json` present in the inventory — missing is the contractual
-   error `no evals/evals.json — author evals first (see TR01); shakespii test
-   requires a reproducible eval suite`.
-2. Readable as UTF-8 text and valid JSON.
-3. `validateEvalsJson` structural diagnostics (skill-creator shape:
-   `skill_name`, `evals[]` with unique integer `id`, non-empty `prompt` /
-   `expected_output` / `expectations`, optional `files`; unknown keys are
-   errors — fail-loud).
-4. Cross-document: `skill_name` equals the frontmatter `name` (skipped when
-   the frontmatter has no parseable name — lint owns that defect); every
-   `files` entry resolves inside the skill dir against the inventory (no
-   absolute paths, no `../`).
-5. Fewer than 3 cases in a structurally valid file — one warning.
-
-TR01 (lint, warn) is the cheap always-on twin: at most one finding per skill,
-delegating to the same deterministic-stage helpers, so lint and test can
-never disagree about validity.
-
-## Output contracts for M4b
-
-`validateGradingJson` and `validateBenchmarkJson`
-(`src/lib/evals/validate.ts`) encode the shapes the M4b runner must emit —
-`grading.json` (graded expectations + summary with `pass_rate` in [0,1]) and
-`benchmark.json` (`configuration` restricted to `with_skill` /
-`without_skill`, nested `result`). They are library surface in M4a; the M4b
-grader/benchmark writers must satisfy them.
+Second `claude -p` call, cwd = the run dir. The grader reads transcript.md
+and outputs/ and replies with JSON; the harness validates
+(`validateGradingJson` + rubric fidelity: expectation texts verbatim, same
+count and order) and persists. One retry (shared budget across gate and
+runner-level failures — at most two grader calls per case); the summary is
+recomputed by the harness (LLM arithmetic is never trusted); grading.json
+is written atomically (tmp + rename). Grading findings: one error per
+failed expectation, quoting the text and the grader's evidence.
 
 ## Run-dir and cache (`src/lib/harness/run-dir.ts`)
 
-- Cache root resolution: `SHAKESPII_CACHE_DIR` env var, else
-  `$XDG_CACHE_HOME/shakespii`, else `~/.cache/shakespii`. The harness never
-  writes inside a skill directory.
+- Cache root: `SHAKESPII_CACHE_DIR`, else `$XDG_CACHE_HOME/shakespii`,
+  else `~/.cache/shakespii`. The harness never writes inside a skill dir.
 - `skillContentHash`: sha256 over SKILL.md raw bytes plus every inventory
-  file's (relPath, raw bytes) in sorted relPath order — bytes are read from
-  disk, so any byte change (including same-size binary mutations) changes
-  the hash.
-- `runKey({skillHash, evalId, model})`: first 16 hex chars of
-  sha256(`HARNESS_SCHEMA_VERSION \n skillHash \n evalId \n model`). Cache
-  granularity is per (skill content, eval case, model).
-- Layout: `<root>/runs/<skillName>/<runKey>/` will hold `outputs/` (executor
-  artifacts + `metrics.json`), `timing.json`, `grading.json` (schemas.md
-  layout). **Cache-hit definition: `grading.json` exists under the runKey.**
-- `HARNESS_SCHEMA_VERSION` (currently 1) bumps when the run-dir layout or
-  grading contract changes, invalidating stale caches. Eval runs are
-  on-demand and cached — never per-commit.
+  file's (relPath, raw bytes), sorted; any byte change rotates the hash.
+- `runKey({skillHash, evalId, model})`: first 16 hex of
+  sha256(`HARNESS_SCHEMA_VERSION \n skillHash \n evalId \n model`).
+- Layout: `<root>/runs/<skillName>/<runKey>/` holds `outputs/` (workspace:
+  skill mount, staged files, agent artifacts, `metrics.json`),
+  `events.jsonl` (raw stream-json), `transcript.md`, `timing.json`, and
+  `grading.json` — written last, only after validation.
+- **Cache-hit definition: `grading.json` exists under the runKey AND
+  passes schema + rubric-fidelity validation against the current case.**
+  A missing, unparseable, schema-invalid, or rubric-mismatched file is a
+  self-healing miss. Cached replay derives identical findings
+  deterministically at zero token cost.
+- `HARNESS_SCHEMA_VERSION` (currently 1) bumps when the layout or grading
+  contract changes. Eval runs are on-demand and cached — never per-commit.
+
+## M4b-2 output contracts
+
+`validateBenchmarkJson` (`src/lib/evals/validate.ts`) encodes the
+`benchmark.json` shape (configurations `with_skill`/`without_skill`,
+nested result, run_summary aggregate stats) that the M4b-2 benchmark
+writer must satisfy.

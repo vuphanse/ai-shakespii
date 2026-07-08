@@ -29,3 +29,8 @@ test('md siblings are scanned with sibling attribution', () => {
   expect(f[0].file).toBe('references/notes.md')
   expect(f[0].line).toBe(1)
 })
+
+test('quoted-utterance @-paths still fire (verified 2026-07-08: @-expansion ignores quoting — docs/CALIBRATION-M3B.md)', () => {
+  const f = ST04.check(skillFromRaw(cleanSkillRaw({ procedure: '- *"run SDD on the spec @docs/spec.md"*' })), CTX)
+  expect(f).toHaveLength(1)
+})

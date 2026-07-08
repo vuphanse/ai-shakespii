@@ -43,7 +43,7 @@ Section presence for CT01–CT07 is matched via the anatomy alias table in `prof
 **Shipped detection (M3a)** (spec §5; all patterns scan outside fenced/inline code via `textOutsideFences` unless noted):
 
 - **ST03** — a md sibling with more than `tocMinLines` (100) lines and no table of contents fires. A TOC is a heading whose normalized text is `contents` or `table of contents`, or at least 3 internal anchor links (`](#…)`) within the first 40 lines. **Unlike the other ST/HY rules, ST03 scans raw sibling text directly and never calls `textOutsideFences`** (by design — the plan's Task 5 lists `textOutsideFences` consumers as ST04/ST05/HY03/HY05/HY06 only), so a fenced ` ```\n## Contents\n``` ` block or fenced anchor links inside a reference file's first 40 lines still satisfy the TOC check.
-- **ST04** — an `@` preceded by start-of-line or whitespace, followed by a path-like token (contains `/` or ends `.md`), fires. Scans SKILL.md plus md siblings.
+- **ST04** — an `@` preceded by start-of-line or whitespace, followed by a path-like token (contains `/` or ends `.md`), fires. Scans SKILL.md plus md siblings. Quoted utterances verified force-loading (2026-07-08 probe); no exemption (docs/CALIBRATION-M3B.md).
 - **ST05** — triggered by any of: `iron law` (case-insensitive), an ALL-CAPS XML-style tag matching `<[A-Z][A-Z-]+>`, or ≥3 standalone `MUST`/`NEVER` tokens combined. Once triggered, requires **both** a markdown table whose **header row** (the row directly above the delimiter row — not just any row containing the word) carries a `Reality` column (covers `Excuse/Reality` and `Thought/Reality` variants) **and** a heading matching `/red flags?/i`; the finding names whichever half is missing.
 
 ## HY — Hygiene

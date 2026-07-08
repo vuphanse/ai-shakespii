@@ -8,7 +8,7 @@ const USAGE = `usage: shakespii <command>
 
 commands:
   init <name> [--description "..."]   scaffold a new skill (intentionally lint-RED)
-  lint <path> [--json]                lint a skill directory
+  lint <path> [--json] [--corpus]     lint a skill directory, or a corpus root with --corpus
 
 flags: --help, --version`
 

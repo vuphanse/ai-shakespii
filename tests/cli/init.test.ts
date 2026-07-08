@@ -15,7 +15,7 @@ test('init scaffolds with {{name}} substituted everywhere', () => {
   expect(skillMd).toContain('name: demo-skill')
   expect(skillMd).not.toContain('{{name}}')
   const evals = readFileSync(join(cwd, 'demo-skill/evals/evals.json'), 'utf8')
-  expect(evals).toContain('"skill": "demo-skill"')
+  expect(evals).toContain('"skill_name": "demo-skill"')
   expect(existsSync(join(cwd, 'demo-skill/README.md'))).toBe(true)
 })
 

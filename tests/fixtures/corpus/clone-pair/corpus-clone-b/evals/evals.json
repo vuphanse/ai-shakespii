@@ -1,0 +1,26 @@
+{
+  "skill_name": "corpus-clone-b",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Exercise corpus-clone-b on a representative input.",
+      "expected_output": "The documented output contract is met.",
+      "files": [],
+      "expectations": ["The output matches the skill's Output section."]
+    },
+    {
+      "id": 2,
+      "prompt": "Exercise corpus-clone-b on a second input shape.",
+      "expected_output": "The documented output contract is met.",
+      "files": [],
+      "expectations": ["The output matches the skill's Output section."]
+    },
+    {
+      "id": 3,
+      "prompt": "Present corpus-clone-b with an out-of-scope request.",
+      "expected_output": "The skill declines or stays out of the way.",
+      "files": [],
+      "expectations": ["No out-of-scope action is taken."]
+    }
+  ]
+}

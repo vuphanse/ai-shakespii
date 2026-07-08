@@ -19,7 +19,7 @@ test('parseSkill composes frontmatter, sections, and inventory', () => {
     'intent', 'inputs', 'preconditions', 'procedure', 'output', 'examples', 'anti-patterns',
   ])
   expect(skill.body.lineOffset).toBe(6)
-  expect(skill.files.map(f => f.relPath)).toEqual(['README.md'])
+  expect(skill.files.map(f => f.relPath)).toEqual(['README.md', 'evals/evals.json'])
 })
 
 test('CRLF input is normalized to LF for SKILL.md and sibling text', () => {

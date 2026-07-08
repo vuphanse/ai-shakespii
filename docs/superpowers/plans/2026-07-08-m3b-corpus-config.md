@@ -2078,7 +2078,7 @@ git commit -m "feat(profile): config override validation and merge"
 
 **Files:**
 - Modify: `src/cli/lint.ts`, `src/cli/index.ts`
-- Create fixtures: `tests/fixtures/config/no-version-skill/SKILL.md`, `tests/fixtures/config/mission-skill/SKILL.md`, and YAML files `tests/fixtures/config/demote-fm05.yaml`, `off-fm05.yaml`, `fm03-options.yaml`, `intent-alias.yaml`, `xs01-off.yaml`, `bad-unknown-rule.yaml`, `bad-severity.yaml`, `bad-top-key.yaml`, `bad-canonical.yaml`
+- Create fixtures: `tests/fixtures/config/no-version-skill/SKILL.md`, `tests/fixtures/config/mission-skill/SKILL.md`, and YAML files `tests/fixtures/config/demote-fm05.yaml`, `off-fm05.yaml`, `fm03-options.yaml`, `intent-alias.yaml`, `xs01-off.yaml`, `bad-unknown-rule.yaml`, `bad-severity.yaml`, `bad-top-key.yaml`, `bad-canonical.yaml`, `bad-anatomy-key.yaml`, `bad-yaml.yaml`
 - Test: `tests/cli/config.test.ts`
 
 **Interfaces:**
@@ -2235,6 +2235,21 @@ anatomy:
     canonical: Mission
 ```
 
+`tests/fixtures/config/bad-anatomy-key.yaml`:
+
+```yaml
+anatomy:
+  nonexistent:
+    level: warn
+```
+
+`tests/fixtures/config/bad-yaml.yaml` (deliberately malformed — the unterminated flow sequence makes `yaml.parse` throw):
+
+```yaml
+rules:
+  FM05: [unterminated
+```
+
 - [ ] **Step 3: Write the failing test**
 
 Create `tests/cli/config.test.ts`:
@@ -2309,6 +2324,8 @@ test('invalid configs exit 2 naming the offending key', () => {
     ['bad-severity.yaml', 'fatal'],
     ['bad-top-key.yaml', 'provenance'],
     ['bad-canonical.yaml', 'canonical'],
+    ['bad-anatomy-key.yaml', 'nonexistent'],
+    ['bad-yaml.yaml', 'malformed YAML'],
   ]
   for (const [file, needle] of cases) {
     const r = lint(target, '--config', join(FIX, file))
@@ -2901,7 +2918,7 @@ Corpus strictly read-only; severity changes recorded, never made (M2/M3 protocol
 
 | Prediction | Evidence |
 |---|---|
-| XS01, personal root: exactly one finding — the collab-readiness block shared by the five ai-whisper kickoff skills (`ai-whisper-bugfix`, `-deliberation`, `-quick-task`, `-ralph`, `-sdd`), on the order of 70 normalized lines. If the five copies have drifted, fragmented shorter runs may appear instead — each fragment still confined to those five skills. | docs/LINT-RULES.md XS01 evidence row (~70-line block × 5 skills) |
+| XS01, personal root: **exactly one finding, five sites** — the collab-readiness block shared by the five ai-whisper kickoff skills (`ai-whisper-bugfix`, `-deliberation`, `-quick-task`, `-ralph`, `-sdd`), on the order of 70 normalized lines. Any other shape — fragmented shorter runs, extra blocks, fewer or more sites — is a deviation and gets its own adjudication row (spec §8). | docs/LINT-RULES.md XS01 evidence row (~70-line block × 5 skills) |
 | XS02, personal root: exactly one cluster — the same five kickoff skills (~80% shared bodies). No other cluster on either root. | docs/LINT-RULES.md XS02 evidence row |
 | Superpowers root: zero XS findings of either kind. | No known ≥15-line identical cross-skill block or ≥0.8 body pair in that corpus |
 | Per-skill single-skill counts on both roots are identical to the CALIBRATION-M3 post-fix tables, with exactly two sanctioned deltas: HY05 gains one personal-root warning (compress's `cd … && python3 …` line — the M3b segment-scan closes the documented miss) and ST04 changes only per the Task 13 branch (A/C: unchanged at 5 errors; B: those 5 errors disappear). Any other delta is a corpus-loop regression, not a finding. | Corpus mode reuses the engine unchanged (spec §8); CALIBRATION-M3 HY05/ST04 adjudication rows |

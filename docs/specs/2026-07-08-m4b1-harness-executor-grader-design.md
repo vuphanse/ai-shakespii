@@ -470,7 +470,9 @@ throughout, existing helper):
   failure findings, run metadata.
 - Grader: prompt template, extraction (fenced/bare), all three gates, retry
   flow, summary recomputation, metrics/timing merge, atomic write, failure
-  finding, evidence truncation.
+  finding, evidence truncation, **cached-replay re-gating** (replay runs
+  `validateGradingJson` + rubric fidelity against the current case before
+  deriving findings; a file failing either gate is never replayed).
 - Pipeline/CLI: flag parsing (incl. `--fresh`/`--model` guards), skip
   notes, JSON key orders, pretty summary variants, exit codes — via
   `TestOptions` injection; `runTest` grows an optional deps parameter for

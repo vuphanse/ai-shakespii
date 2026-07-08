@@ -63,7 +63,7 @@ Section presence for CT01–CT07 is matched via the anatomy alias table in `prof
 - **HY02** — fires on `/Users/...` or `/home/...` (or `X:\Users\`), scanned everywhere including fenced code and all text siblings (not just md).
 - **HY03** — phrase-list-only, word-boundary: `currently`, `as of`, `recently`, `at the time of writing`. Bare dates are never flagged (changelogs, spec filenames, provenance headers are legitimate). Exempt inside `<details>` blocks and under any heading matching `/old patterns/i`.
 - **HY04** — a magnitude number (`\d+` with optional decimal and `K`/`M`/`B` suffix) within 6 tokens of a rot noun (`installs`, `downloads`, `stars`, `users`, `leaderboard`, `rank`/`ranking`) fires. Exempt when the skill carries frontmatter `version` **and** a `/last reviewed/i` marker in SKILL.md or an md sibling. **Post-calibration refinement (docs/CALIBRATION-M3.md):** a magnitude token is skipped when it is a leading ordered-list marker (e.g. `2.`, optionally after heading hashes as in `### 2.`) or immediately preceded by `Step`/`Steps`, so list numbering and `### Step N:` headings no longer false-positive against a nearby rot noun.
-- **HY05** — a line starting (after an optional `$ `) with a known lowercase command word (`git`, `bun`, `npm`, `npx`, `node`, `python`, `python3`, `pip`, `pip3`, `brew`, `curl`, `wget`, `make`, `docker`, `cargo`, `go`, `shakespii`, `whisper`, `claude`) **and** whose remainder carries a flag (`-x`/`--flag`) or a path-ish token (contains `/` or a file extension) fires. The command-word match is case-sensitive lowercase, so sentence-initial prose ("Go to docs/…", "Make sure…") stays silent; the argument requirement keeps prose like "git history proves it" silent.
+- **HY05** — a line starting (after an optional `$ `) with a known lowercase command word (`git`, `bun`, `npm`, `npx`, `node`, `python`, `python3`, `pip`, `pip3`, `brew`, `curl`, `wget`, `make`, `docker`, `cargo`, `go`, `shakespii`, `whisper`, `claude`) **and** whose remainder carries a flag (`-x`/`--flag`) or a path-ish token (contains `/` or a file extension) fires. The command-word match is case-sensitive lowercase, so sentence-initial prose ("Go to docs/…", "Make sure…") stays silent; the argument requirement keeps prose like "git history proves it" silent. As of M3b, unfenced lines are additionally split on `&&`, `||`, and `;`, and every segment's leading word is checked (the `$ ` prompt prefix stays legal only at true line start); one finding per line. Single `|` deliberately does not split — an unfenced table row documenting commands (`| git status | … |`) must not fire. This closes the compress compound-command miss documented in CALIBRATION-M3.
 - **HY06** — a `%` figure or `Nx` multiplier within 8 tokens of a claim word (`save`/`savings`/`saved`, `faster`, `speedup`, `reduc-`, `compress-`, `improvement`, `smaller`) fires. Exempt when the skill ships `evals/evals.json` (inventory check) or the line contains `unverified`/`anecdotal`.
 
 ## XS — Cross-skill (needs corpus context)
@@ -72,6 +72,15 @@ Section presence for CT01–CT07 is matched via the anatomy alias table in `prof
 |---|---|---|---|
 | XS01 | warn | Duplicate-block detection: >15 identical lines shared across ≥2 skills → extract to a shared reference | ~70-line collab-readiness block × 5 ai-whisper skills |
 | XS02 | warn | Near-clone detection: body similarity above threshold → suggest parameterizing into one skill | The 5 kickoff skills share ~80% of their bodies |
+
+**Shipped detection (M3b).** XS01: SKILL.md bodies are normalized to non-blank,
+trailing-whitespace-stripped lines (blanks neither break runs nor count); maximal
+identical runs of ≥ `minLines` lines shared by ≥ `minSkills` distinct skills fire once
+per block, with contained sub-blocks merged into the longer block when their skill
+sets agree, and sites reported in original file coordinates. XS02: Jaccard similarity
+over each skill's deduplicated normalized line set; pairs at or above `similarity`
+are union-find-clustered and each cluster fires once, one site per member spanning
+its body range. Both require `--corpus`; both count once in summaries.
 
 ## PH — Placeholders
 
@@ -91,3 +100,9 @@ Section presence for CT01–CT07 is matched via the anatomy alias table in `prof
 FM01, FM02, FM04, CT03, ST02, PH01 — highest signal, fully static, real offenders in the dogfood corpus to test against. PH01 is in the seed set because without it the init→lint RED loop doesn't exist at MVP (M1 spec §3.4).
 
 **M3a completion (2026-07-08):** all 24 single-skill rules in this catalog (the 6 seed rules above plus the 18 delivered in M3a — FM03, FM05, CT01, CT02, CT04–CT07, ST01, ST03–ST05, HY01–HY06) are implemented, fixture-tested, and live (`src/lib/rules/index.ts`), calibrated against the dogfood corpus (docs/CALIBRATION-M3.md). XS01/XS02 remain pending M3b (`--corpus` context mode). TR01/TR02 remain pending M4 (harness-backed, not static).
+
+**M3b completion (2026-07-08):** XS01/XS02 are implemented and live behind `shakespii
+lint --corpus` (docs/CALIBRATION-M3B.md); `--config` profile overrides shipped
+(severity error|warn|off, option merge, alias replacement, fail-loud validation);
+HY05 gained the compound-command segment scan; ST04's quoted-utterance question was
+resolved by the recorded experiment. TR01/TR02 remain pending M4 (harness-backed).

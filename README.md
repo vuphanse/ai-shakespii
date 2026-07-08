@@ -6,7 +6,7 @@ Most prompt tools focus on writing better prompts. ai-shakespii focuses on desig
 
 ## Status
 
-**M2.5 shipped — the companion skill is live.** `git clone` + `bun install` + `bun link` gives you `shakespii init` and `shakespii lint` (six seed rules, pretty + `--json` output), and `skills/using-shakespii/` teaches agents to drive them (see the install section below). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M3 (the full rule catalog).
+**M3b shipped — corpus mode and config overrides are live.** `git clone` + `bun install` + `bun link` gives you `shakespii init` and `shakespii lint` (full single-skill rule catalog, pretty + `--json` output), plus `--corpus` for cross-skill XS01/XS02 checks and `--config` for profile overrides, and `skills/using-shakespii/` teaches agents to drive them (see the install section below). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M4 (the test harness).
 
 ## Install the companion skill
 
@@ -23,7 +23,9 @@ Run it from the repo root. Uninstall by removing the link:
 A CLI (`shakespii`) that operates on standard Agent Skills (`SKILL.md` format):
 
 - `shakespii init <name>` — scaffold a well-formed skill
-- `shakespii lint <path>` — validate a skill against the rule catalog
+- `shakespii lint <path>` — validate a skill against the rule catalog; `--corpus`
+  lints a whole directory of skills (cross-skill XS rules included) and `--config`
+  applies profile overrides
 - `shakespii test <path>` — run a skill's eval cases against representative scenarios
 - Writer and publishing workflows come later (see roadmap)
 

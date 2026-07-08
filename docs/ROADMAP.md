@@ -37,8 +37,8 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 
 ## M3b — Corpus mode + config
 
-- [ ] Cross-skill rules XS01/XS02 (corpus-context mode: `shakespii lint --corpus ~/.claude/skills`)
-- [ ] Config file for profile overrides
+- [x] Cross-skill rules XS01/XS02 (corpus-context mode: `shakespii lint --corpus ~/.claude/skills`)
+- [x] Config file for profile overrides
 
 ## M4 — Test harness
 

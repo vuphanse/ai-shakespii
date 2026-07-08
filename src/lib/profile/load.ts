@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { parse } from 'yaml'
-import type { Profile, RuleSetting, Severity } from '../types'
+import type { Profile, RuleSetting, RuleSeverity, Severity } from '../types'
 
 export function loadProfile(path: string): Profile {
   const doc: unknown = parse(readFileSync(path, 'utf8'))
@@ -27,7 +27,7 @@ function validateProfile(doc: unknown): asserts doc is Profile {
 }
 
 export function resolveRule(setting: RuleSetting): {
-  severity: Severity
+  severity: RuleSeverity
   options: Record<string, unknown>
 } {
   if (typeof setting === 'string') return { severity: setting, options: {} }

@@ -70,7 +70,8 @@ export interface Rule {
   check(skill: ParsedSkill, ctx: RuleContext): RuleFinding[]
 }
 
-export type RuleSetting = Severity | { severity: Severity; options?: Record<string, unknown> }
+export type RuleSeverity = Severity | 'off'
+export type RuleSetting = RuleSeverity | { severity: RuleSeverity; options?: Record<string, unknown> }
 
 export interface Profile {
   profile: string

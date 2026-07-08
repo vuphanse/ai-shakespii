@@ -410,9 +410,14 @@ export async function testSkill(skill: ParsedSkill, options?: TestOptions): Prom
 export type StageReport =
   | { stage: 'deterministic'; status: 'pass' | 'fail'; findings: HarnessFinding[] }
   | { stage: 'scenario'; status: 'pass' | 'fail'; findings: HarnessFinding[]; runs: ScenarioRunMeta[] }
-  | { stage: 'grading'; status: 'pass' | 'fail'; findings: HarnessFinding[] }
+  | { stage: 'grading'; status: 'pass' | 'fail'; findings: HarnessFinding[]; expectations: { passed: number; total: number } }
   | { stage: 'scenario' | 'grading'; status: 'skipped'; note: string }
 ```
+
+The executed grading report's `expectations` field counts graded
+expectations across cold and cached cases (executor-failed or
+grader-failed cases contribute nothing); it is the data source for the
+pretty summary's `<P>/<Q>` (amendment §13.1).
 
 Skip notes (contractual strings):
 
@@ -428,7 +433,10 @@ pre-announced in M4a ("unavailable until M4b"): new status value `skipped`,
 real scenario/grading stage bodies, and the scenario stage's `runs` array.
 Key orders are contractual: top level `version, mode, skill, stages,
 summary`; findings `severity, message, file, line`; runs entries
-`evalId, cached, status, durationSeconds`. `summary` keeps counting all
+`evalId, cached, status, durationSeconds`; executed scenario stage
+`stage, status, findings, runs`; executed grading stage
+`stage, status, findings, expectations` (with `expectations` keys
+`passed, total`); skipped stages `stage, status, note`. `summary` keeps counting all
 findings across stages (errors/warnings), exactly as M4a defined.
 
 Pretty output (`src/cli/format/test-pretty.ts`) — findings list unchanged
@@ -442,8 +450,8 @@ throughout, existing helper):
 - `--run`, stages executed:
   `deterministic: <E> error(s), <W> warning(s) · scenario: <ok>/<total> run(s) ok (<C> cached) · grading: <P>/<Q> expectation(s) passed`
   where `<ok>` counts runs with status `ok` (cached hits included),
-  `<total>` = eval-case count, `<C>` = cache hits, `<P>`/`<Q>` = passed /
-  graded expectation totals across graded cases.
+  `<total>` = eval-case count, `<C>` = cache hits, and `<P>`/`<Q>` come
+  from the executed grading report's `expectations` field (§13.1).
 
 ## 8. Keystones and blast radius
 
@@ -571,6 +579,16 @@ sixth eval case is never executed with `--run` in M4b-1.
 
 ## 13. Plan-time amendments
 
-None yet. Factual discoveries during planning are applied here as numbered
+Factual discoveries during planning are applied here as numbered
 amendments (with re-review), never as silent plan deviations — the M4a §12
 mechanism.
+
+1. **Grading stage totals (2026-07-08, plan-time).** §7's pretty summary
+   requires `<P>/<Q> expectation(s) passed`, but the executed grading
+   report as first specified carried only `findings`, from which totals
+   are not derivable — a fully passing case contributes no findings. The
+   executed grading `StageReport` gains a final
+   `expectations: { passed: number; total: number }` field (key order
+   `stage, status, findings, expectations`), counting graded expectations
+   across cold and cached cases; executor-failed and grader-failed cases
+   contribute nothing. Additive to test-JSON v1; §7 updated in place.

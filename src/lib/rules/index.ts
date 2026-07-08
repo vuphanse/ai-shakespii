@@ -22,6 +22,7 @@ import { HY03 } from './HY03'
 import { HY04 } from './HY04'
 import { HY05 } from './HY05'
 import { HY06 } from './HY06'
+import { TR01 } from './TR01'
 import { PH01 } from './PH01'
 
 export const rules: Rule[] = [
@@ -29,5 +30,6 @@ export const rules: Rule[] = [
   CT01, CT02, CT03, CT04, CT05, CT06, CT07,
   ST01, ST02, ST03, ST04, ST05,
   HY01, HY02, HY03, HY04, HY05, HY06,
+  TR01,
   PH01,
 ]

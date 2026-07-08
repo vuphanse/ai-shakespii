@@ -20,6 +20,7 @@ test('fresh init output produces exactly the M1 RED set and byte-matches the tem
   expect(byRule.get('PH01')).toBe(18)
   expect(byRule.get('FM04')).toBe(1)
   expect(byRule.get('CT03')).toBe(1)
+  expect(byRule.has('TR01')).toBe(false) // migrated template evals validate; TR01 stays silent on fresh scaffolds
   expect(report.findings.length).toBe(20) // no other findings
 
   const ph01ByFile = new Map<string, number>()

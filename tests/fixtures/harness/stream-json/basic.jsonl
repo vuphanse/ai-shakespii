@@ -1,0 +1,7 @@
+{"type":"system","subtype":"init","session_id":"abc"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"Reading the skill."},{"type":"tool_use","name":"Read","input":{"file_path":".claude/skills/demo/SKILL.md"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","is_error":false,"content":"# demo skill"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Write","input":{"file_path":"out.md","content":"done"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","is_error":true,"content":"permission denied"}]}}
+not json at all
+{"type":"result","result":"Task complete.","usage":{"input_tokens":123,"output_tokens":45},"num_turns":4,"duration_ms":6100,"is_error":false}

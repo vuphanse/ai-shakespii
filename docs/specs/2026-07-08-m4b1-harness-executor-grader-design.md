@@ -337,6 +337,23 @@ If the retry also fails a gate: one grading-stage error finding
 `eval <id>: grader returned invalid grading (<first diagnostic or mismatch,
 one line>)`; nothing is written; the case stays uncached.
 
+**Grader call failure (runner-level).** A grader `runner.run` that returns
+`status !== 'completed'`, or completes with a null or whitespace-only
+`finalText`, is a runner-level failure. It draws on the **same single-retry
+budget** as gate failures — at most two grader calls per eval case, total.
+The retry re-issues the original grader prompt unchanged (there is no
+previous reply to critique). If the second call also fails — at the runner
+level or at any validation gate — the case gets one grading-stage error
+finding reflecting the final failure mode: runner-level →
+`eval <id>: grader <status> — <errorMessage or 'no reply text'>` (file
+`evals/evals.json`, line null), where `<status>` is `timeout`,
+`nonzero-exit`, or `no-reply`; gate-level → the invalid-grading message
+above. Either way nothing is persisted — no `grading.json`, no
+`timing.json` — so the case stays uncached, exactly like the executor
+failure path (§5 step 7). A grader failure is a test failure (error
+finding, exit 1), never a run error; only an unspawnable `claude` binary
+(§3 `ClaudeUnavailableError`) exits 2.
+
 On success the harness builds the persisted document — the grader's
 arithmetic is never trusted:
 
@@ -472,7 +489,12 @@ throughout, existing helper):
   flow, summary recomputation, metrics/timing merge, atomic write, failure
   finding, evidence truncation, **cached-replay re-gating** (replay runs
   `validateGradingJson` + rubric fidelity against the current case before
-  deriving findings; a file failing either gate is never replayed).
+  deriving findings; a file failing either gate is never replayed),
+  **runner-level failure handling** (grader timeout / nonzero-exit /
+  empty-reply each: shared single retry re-issuing the original prompt,
+  then the `eval <id>: grader <status> — …` finding with nothing persisted;
+  plus a mixed case proving the retry budget is shared — runner failure
+  then gate failure yields one finding, two calls total).
 - Pipeline/CLI: flag parsing (incl. `--fresh`/`--model` guards), skip
   notes, JSON key orders, pretty summary variants, exit codes — via
   `TestOptions` injection; `runTest` grows an optional deps parameter for

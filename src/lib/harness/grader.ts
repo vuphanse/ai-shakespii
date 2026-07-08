@@ -1,5 +1,10 @@
+import { renameSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { EvalCase, GradingExpectation, GradingJson } from '../evals/types'
 import { validateGradingJson } from '../evals/validate'
+import type { ClaudeRunner, RunnerResult } from './claude-runner'
+import { RUN_TIMEOUT_MS } from './claude-runner'
+import type { ExecutionMetrics } from './stream-json'
 import type { HarnessFinding } from './types'
 
 const truncate = (s: string, max: number): string => (s.length > max ? `${s.slice(0, max)}…` : s)
@@ -96,4 +101,81 @@ export function gradingFindings(evalId: number, grading: GradingJson): HarnessFi
       file: 'evals/evals.json',
       line: null,
     }))
+}
+
+export type GradeCaseResult = { grading: GradingJson; graderDurationSeconds: number } | { failure: string }
+
+const round2 = (n: number): number => Math.round(n * 100) / 100
+
+type Attempt =
+  | { kind: 'ok'; doc: GradingJson; reply: string }
+  | { kind: 'runner'; failure: string }
+  | { kind: 'gate'; problems: string[]; reply: string }
+
+function classify(result: RunnerResult, expectations: string[]): Attempt {
+  if (result.status !== 'completed') {
+    return { kind: 'runner', failure: `grader ${result.status} — ${result.errorMessage ?? 'no reply text'}` }
+  }
+  const reply = result.finalText ?? ''
+  if (reply.trim().length === 0) {
+    return { kind: 'runner', failure: 'grader no-reply — no reply text' }
+  }
+  const doc = extractGraderJson(reply)
+  if (doc === undefined) return { kind: 'gate', problems: ['reply is not valid JSON'], reply }
+  const problems = gateGraderReply(doc, expectations)
+  if (problems.length > 0) return { kind: 'gate', problems, reply }
+  return { kind: 'ok', doc: doc as GradingJson, reply }
+}
+
+/**
+ * One grader pass for an executed eval case: at most two runner calls total
+ * (spec §6 — runner-level and gate failures share the single-retry budget).
+ * On success writes timing.json and grading.json (write .tmp, then rename).
+ */
+export async function gradeCase(args: {
+  evalCase: EvalCase
+  dir: string
+  runner: ClaudeRunner
+  model: string
+  executorDurationSeconds: number
+  metrics: ExecutionMetrics
+}): Promise<GradeCaseResult> {
+  const original = buildGraderPrompt(args.evalCase)
+  let graderDuration = 0
+
+  const call = async (prompt: string): Promise<Attempt> => {
+    const result = await args.runner.run({ prompt, cwd: args.dir, model: args.model, timeoutMs: RUN_TIMEOUT_MS })
+    graderDuration = round2(graderDuration + result.durationSeconds)
+    return classify(result, args.evalCase.expectations)
+  }
+
+  let attempt = await call(original)
+  if (attempt.kind !== 'ok') {
+    const retryPrompt =
+      attempt.kind === 'gate' ? buildGraderRetryPrompt(original, attempt.problems, attempt.reply) : original
+    attempt = await call(retryPrompt)
+  }
+  if (attempt.kind === 'runner') return { failure: attempt.failure }
+  if (attempt.kind === 'gate') return { failure: `grader returned invalid grading (${attempt.problems[0]})` }
+
+  const timing = {
+    executor_duration_seconds: args.executorDurationSeconds,
+    grader_duration_seconds: graderDuration,
+    total_duration_seconds: round2(args.executorDurationSeconds + graderDuration),
+  }
+  const merged: GradingJson = {
+    expectations: attempt.doc.expectations,
+    summary: recomputeSummary(attempt.doc.expectations),
+    execution_metrics: args.metrics as unknown as Record<string, unknown>,
+    timing,
+  }
+  const diagnostics = validateGradingJson(merged)
+  if (diagnostics.length > 0) {
+    throw new Error(`internal: merged grading document failed validation (${diagnostics[0].path}: ${diagnostics[0].message})`)
+  }
+  writeFileSync(join(args.dir, 'timing.json'), `${JSON.stringify(timing, null, 2)}\n`)
+  const tmp = join(args.dir, 'grading.json.tmp')
+  writeFileSync(tmp, `${JSON.stringify(merged, null, 2)}\n`)
+  renameSync(tmp, join(args.dir, 'grading.json'))
+  return { grading: merged, graderDurationSeconds: graderDuration }
 }

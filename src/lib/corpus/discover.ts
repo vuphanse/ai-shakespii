@@ -13,9 +13,10 @@ export interface Discovered {
 
 /**
  * One level deep, sorted, symlink-following (spec §1). A child directory with
- * a SKILL.md is a skill; one without is recorded as skipped; plain files are
- * ignored. A root that is itself a skill, or not a directory, throws — the
- * CLI turns that into exit 2.
+ * a SKILL.md is a skill; one without is recorded as skipped, as is a dangling
+ * symlink or other inaccessible entry; plain files are ignored. A root that
+ * is itself a skill, or not a directory, throws — the CLI turns that into
+ * exit 2.
  */
 export function discoverSkills(root: string): Discovered {
   let rootIsDir: boolean
@@ -35,8 +36,12 @@ export function discoverSkills(root: string): Discovered {
     let isDir: boolean
     try {
       isDir = statSync(dir).isDirectory() // statSync follows symlinks
-    } catch {
-      continue // dangling symlink — nothing to lint
+    } catch (err) {
+      // dangling symlink (or other stat failure) — nothing to lint, but still
+      // accounted for: every entry ends up in skillDirs or skipped, never lost
+      const code = (err as NodeJS.ErrnoException).code
+      skipped.push({ dir, reason: code === 'ENOENT' ? 'broken symlink' : 'inaccessible' })
+      continue
     }
     if (!isDir) continue
     if (existsSync(join(dir, 'SKILL.md'))) skillDirs.push(dir)

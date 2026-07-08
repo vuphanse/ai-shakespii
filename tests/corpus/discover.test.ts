@@ -26,6 +26,14 @@ test('symlinked skill directories are followed', () => {
   expect(skillDirs.map(d => basename(d))).toEqual(['linked-skill'])
 })
 
+test('a dangling symlink is recorded as skipped, not silently dropped', () => {
+  const root = mkdtempSync(join(tmpdir(), 'shakespii-corpus-'))
+  symlinkSync(join(root, 'does-not-exist'), join(root, 'broken-link'))
+  const { skillDirs, skipped } = discoverSkills(root)
+  expect(skillDirs).toEqual([])
+  expect(skipped).toEqual([{ dir: join(root, 'broken-link'), reason: 'broken symlink' }])
+})
+
 test('a root that is itself a skill throws the exact contract message', () => {
   expect(() => discoverSkills(join(import.meta.dir, '../fixtures/minimal-pass'))).toThrow(
     'target is a single skill; drop --corpus or point at its parent directory',

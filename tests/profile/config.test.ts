@@ -45,6 +45,14 @@ test('empty rules/anatomy sections are no-ops', () => {
   expect(p.anatomy).toEqual(base.anatomy)
 })
 
+test('unknown option key throws instead of silently no-oping', () => {
+  expect(() => applyConfig(base, { rules: { XS01: { options: { minLine: 99 } } } })).toThrow('unknown option "minLine"')
+})
+
+test('a rule with no base options rejects any option key', () => {
+  expect(() => applyConfig(base, { rules: { FM01: { options: { anything: 1 } } } })).toThrow('unknown option "anything"')
+})
+
 test('fail-loud: every invalid shape names the offending key', () => {
   expect(() => applyConfig(base, null)).toThrow('invalid config: not a mapping')
   expect(() => applyConfig(base, { provenance: {} })).toThrow('unknown top-level key "provenance"')

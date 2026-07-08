@@ -60,6 +60,21 @@ test('--config applies in corpus mode too', () => {
   expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 0, warnings: 1 })
 })
 
+test('corpus mode exits 1 and tallies errors when a corpus finding is promoted to error', () => {
+  const r = lint(join(CORPUS, 'clone-pair'), '--corpus', '--json', '--config', join(FIX, 'xs01-error.yaml'))
+  expect(r.exitCode).toBe(1)
+  const rep = JSON.parse(r.stdout)
+  expect(rep.corpusFindings).toHaveLength(2)
+  const xs01 = rep.corpusFindings.find((f: { ruleId: string }) => f.ruleId === 'XS01')
+  const xs02 = rep.corpusFindings.find((f: { ruleId: string }) => f.ruleId === 'XS02')
+  expect(xs01.severity).toBe('error')
+  expect(xs02.severity).toBe('warn')
+  expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 1, warnings: 1 })
+  for (const s of rep.skills) {
+    expect(s.summary).toEqual({ errors: 0, warnings: 0 })
+  }
+})
+
 test('invalid configs exit 2 naming the offending key', () => {
   const target = join(import.meta.dir, '../fixtures/minimal-pass')
   const cases: Array<[string, string]> = [
@@ -69,6 +84,7 @@ test('invalid configs exit 2 naming the offending key', () => {
     ['bad-canonical.yaml', 'canonical'],
     ['bad-anatomy-key.yaml', 'nonexistent'],
     ['bad-yaml.yaml', 'malformed YAML'],
+    ['bad-option.yaml', 'minLine'],
   ]
   for (const [file, needle] of cases) {
     const r = lint(target, '--config', join(FIX, file))

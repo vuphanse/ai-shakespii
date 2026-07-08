@@ -70,7 +70,13 @@ function mergeRuleSetting(id: string, baseSetting: RuleSetting, val: unknown): R
     if (typeof entry.options !== 'object' || entry.options === null || Array.isArray(entry.options)) {
       throw new Error(`invalid config: rule "${id}" options is not a mapping`)
     }
-    options = { ...baseOptions, ...(entry.options as Record<string, unknown>) }
+    const overrideOptions = entry.options as Record<string, unknown>
+    for (const key of Object.keys(overrideOptions)) {
+      if (!Object.hasOwn(baseOptions, key)) {
+        throw new Error(`invalid config: rule "${id}" has unknown option "${key}"`)
+      }
+    }
+    options = { ...baseOptions, ...overrideOptions }
   }
   return Object.keys(options).length === 0 ? severity : { severity, options }
 }

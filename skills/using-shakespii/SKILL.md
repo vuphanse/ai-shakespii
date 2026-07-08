@@ -1,7 +1,7 @@
 ---
 name: using-shakespii
-description: "Use when creating a new agent skill or auditing, linting, or fixing an existing one — drives the shakespii CLI (init, lint --json) to scaffold standard SKILL.md skills and resolve findings until clean."
-version: 0.3.0
+description: "Use when creating a new agent skill or auditing, linting, testing, or fixing an existing one — drives the shakespii CLI (init, lint --json, test --run) to scaffold standard SKILL.md skills and resolve findings until clean."
+version: 0.4.0
 ---
 
 # using-shakespii
@@ -57,21 +57,39 @@ Audit branch — fix an existing skill:
 
 ### Testing a skill's evals
 
-After a skill lints clean, verify its eval suite with the static harness:
+After a skill lints clean, verify its eval suite with the harness:
 
 ```bash
 shakespii test <skill-dir> --json
 ```
 
-Exit codes: 0 = deterministic stage passed (warnings allowed), 1 = error
-findings to fix, 2 = the run itself failed (bad path, no SKILL.md). The
-deterministic stage checks that `evals/evals.json` exists, parses, follows
-the skill-creator schema (`skill_name` equal to the frontmatter name, unique
-integer ids, non-empty prompts and expectations, at least three cases), and
-references only files that exist inside the skill directory. The `scenario`
-and `grading` stages report `unavailable` until the LLM half of the harness
-ships. Fix loop: read `stages[0].findings[].message` — each message carries
-the JSON path of the defect — correct `evals/evals.json`, re-run until exit 0.
+Exit codes: 0 = no error findings (warnings allowed), 1 = error findings to
+fix, 2 = the run itself failed (bad path, no SKILL.md, claude CLI missing).
+The deterministic stage checks that `evals/evals.json` exists, parses,
+follows the skill-creator schema (`skill_name` equal to the frontmatter
+name, unique integer ids, non-empty prompts and expectations, at least
+three cases), and references only files that exist inside the skill
+directory. Without `--run` the `scenario` and `grading` stages report
+`skipped` — the command is free and safe to loop on.
+
+To actually execute the evals — a headless agent runs each case, then an
+LLM grader scores every expectation with cited evidence — add `--run`:
+
+```bash
+shakespii test <skill-dir> --run --json
+```
+
+`--run` spends real tokens (one executor and one grader session per eval
+case), so confirm with the human before the first run on a suite. Results
+are cached per (skill content, eval, model): re-running after no changes
+replays instantly from cache; editing the skill or its evals re-runs only
+because the content hash changed. `--fresh` forces re-execution despite the
+cache; `--model <name>` overrides the default executor/grader model
+(sonnet). Fix loop: deterministic findings name the JSON path of the defect
+in `evals/evals.json`; `scenario` findings mean the executor run itself
+failed (timeout, crash); `grading` findings quote the failed expectation
+and the grader's evidence — fix the skill (or a genuinely wrong
+expectation, with the human's approval) and re-run until exit 0.
 
 Authoring branch — create a new skill:
 

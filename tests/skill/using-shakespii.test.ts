@@ -10,6 +10,7 @@ const REQUIRED_PROMPT_ANCHORS = [
   'Fix the ESLint errors',
   'Run shakespii lint on ./notes',
   'Audit all my installed skills',
+  'Run the evals for',
 ]
 
 test('using-shakespii lints to zero findings through the real CLI', () => {
@@ -27,7 +28,7 @@ test('evals.json carries the skill-creator shape with the five anchored cases', 
     evals: Array<{ id: number; prompt: string; expected_output: string; expectations: string[] }>
   }
   expect(evals.skill_name).toBe('using-shakespii')
-  expect(evals.evals.length).toBeGreaterThanOrEqual(5)
+  expect(evals.evals.length).toBeGreaterThanOrEqual(6)
   const ids = evals.evals.map(c => c.id)
   expect(new Set(ids).size).toBe(ids.length)
   for (const c of evals.evals) {

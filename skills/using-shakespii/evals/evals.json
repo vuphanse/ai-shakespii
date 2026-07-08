@@ -56,6 +56,19 @@
         "Reports XS01/XS02 findings with their site lists",
         "Treats the installed corpus as read-only and proposes changes instead of applying them"
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "Run the evals for ~/.claude/skills/compress and tell me which expectations fail.",
+      "expected_output": "The agent confirms token spend with the human, runs shakespii test with --run and --json, reads the scenario and grading findings, and reports each failed expectation with the grader's evidence — re-running from cache when nothing changed.",
+      "files": [],
+      "expectations": [
+        "Confirms with the human before the first token-spending --run",
+        "Invokes `shakespii test <dir> --run --json` rather than executing evals by hand",
+        "Distinguishes scenario findings (executor failures) from grading findings (failed expectations)",
+        "Reports failed expectations verbatim with the grader's evidence",
+        "Relies on the cache for unchanged re-runs instead of passing --fresh by default"
+      ]
     }
   ]
 }

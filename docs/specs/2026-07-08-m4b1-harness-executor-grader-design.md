@@ -506,6 +506,16 @@ throughout, existing helper):
 
 Per the adjudicated budget — both in-repo targets, 1 run/eval, sonnet:
 
+**Sequencing rule (binding on the plan):** the calibration sweep and cache
+proof run **before** the using-shakespii v0.4.0 changes of §11 — at sweep
+time `skills/using-shakespii/evals/evals.json` has exactly its current 5
+cases, so the budget arithmetic is exactly 5 + 3 = 8 executor sessions and
+8 grader calls, and the cache proof is 8/8. The v0.4.0 edits (SKILL.md
+body, description, sixth eval case) land after the sweep; they change
+`skillContentHash` and rotate every using-shakespii runKey **by design** —
+the recorded 8/8 proof is point-in-time evidence and is not re-swept. The
+sixth eval case is never executed with `--run` in M4b-1.
+
 1. **Predictions committed before the sweep** (separate commit):
    per-eval pass/fail predictions for `skills/using-shakespii` (5 cases)
    and `tests/fixtures/harness/compress` (3 cases), plus the prediction
@@ -539,7 +549,10 @@ Per the adjudicated budget — both in-repo targets, 1 run/eval, sonnet:
 - `skills/using-shakespii` — v0.4.0: SKILL.md teaches the `--run` loop
   (when to spend tokens, reading scenario/grading findings, `--fresh`);
   description mentions testing (resolves the parked M4a follow-up); sixth
-  eval case covering the `--run` teaching; weld re-pins.
+  eval case covering the `--run` teaching; weld re-pins. **Lands after the
+  §10 calibration sweep** (sequencing rule) — the calibration budget and
+  8/8 cache proof are computed against the pre-v0.4.0 5-case suite, and
+  the sixth case is deterministic-stage-only in M4b-1.
 - Dual-location sync for every doc (canonical
   `~/.ai-pref-nsync/local-docs/ai-shakespii/…`, repo mirror, cmp-verified).
 

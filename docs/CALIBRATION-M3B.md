@@ -2,6 +2,19 @@
 
 **Date:** 2026-07-08 · **Profile:** default · Corpus strictly read-only throughout.
 
+## Predictions (written before the sweep)
+
+Sweep command: `bun scripts/calibrate.ts` (both default roots, via `lint --corpus --json`).
+Corpus strictly read-only; severity changes recorded, never made (M2/M3 protocol).
+
+| Prediction | Evidence |
+|---|---|
+| XS01, personal root: **exactly one finding, five sites** — the collab-readiness block shared by the five ai-whisper kickoff skills (`ai-whisper-bugfix`, `-deliberation`, `-quick-task`, `-ralph`, `-sdd`), on the order of 70 normalized lines. Any other shape — fragmented shorter runs, extra blocks, fewer or more sites — is a deviation and gets its own adjudication row (spec §8). | docs/LINT-RULES.md XS01 evidence row (~70-line block × 5 skills) |
+| XS02, personal root: exactly one cluster — the same five kickoff skills (~80% shared bodies). No other cluster on either root. | docs/LINT-RULES.md XS02 evidence row |
+| Superpowers root: zero XS findings of either kind. | No known ≥15-line identical cross-skill block or ≥0.8 body pair in that corpus |
+| Per-skill single-skill counts on both roots are identical to the CALIBRATION-M3 post-fix tables, with exactly two sanctioned deltas: HY05 gains one personal-root warning (compress's `cd … && python3 …` line — the M3b segment-scan closes the documented miss) and ST04 unchanged at 5 personal-root errors (Branch A: findings stand). Any other delta is a corpus-loop regression, not a finding. | Corpus mode reuses the engine unchanged (spec §8); CALIBRATION-M3 HY05/ST04 adjudication rows |
+| Skipped reporting: personal root reports `personal-preferences` (`no SKILL.md`); superpowers root reports none; zero `runError` entries on either root. | M3 corpus-composition notes (14 + 14 skills, one empty dir) |
+
 ## ST04 quoted-utterance experiment (spec §5)
 
 Protocol: two throwaway project-scoped probe skills (control: unquoted `@docs/marker.md`;

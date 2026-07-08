@@ -116,6 +116,9 @@ export function validateGradingJson(doc: unknown): SchemaDiagnostic[] {
 const BENCHMARK_ROOT_KEYS = ['metadata', 'runs', 'run_summary', 'notes']
 const BENCHMARK_RUN_KEYS = ['eval_id', 'eval_name', 'configuration', 'run_number', 'result', 'expectations', 'notes']
 const BENCHMARK_RESULT_KEYS = ['pass_rate', 'passed', 'failed', 'total', 'time_seconds', 'tokens', 'tool_calls', 'errors']
+const BENCHMARK_SUMMARY_KEYS = ['with_skill', 'without_skill', 'delta']
+const BENCHMARK_SUMMARY_STAT_KEYS = ['pass_rate', 'time_seconds', 'tokens']
+const BENCHMARK_STAT_FIELD_KEYS = ['mean', 'stddev', 'min', 'max']
 
 export function validateBenchmarkJson(doc: unknown): SchemaDiagnostic[] {
   if (!isRecord(doc)) return [{ path: '$', message: 'root must be an object' }]
@@ -173,8 +176,55 @@ export function validateBenchmarkJson(doc: unknown): SchemaDiagnostic[] {
   if (!isRecord(doc.run_summary)) {
     out.push({ path: 'run_summary', message: 'must be an object' })
   } else {
-    for (const k of ['with_skill', 'without_skill', 'delta']) {
-      if (!isRecord(doc.run_summary[k])) out.push({ path: `run_summary.${k}`, message: 'must be an object' })
+    for (const cfgName of ['with_skill', 'without_skill']) {
+      const cfg = doc.run_summary[cfgName]
+      if (!isRecord(cfg)) {
+        out.push({ path: `run_summary.${cfgName}`, message: 'must be an object' })
+        continue
+      }
+      for (const stat of BENCHMARK_SUMMARY_STAT_KEYS) {
+        const v = cfg[stat]
+        if (!isRecord(v)) {
+          out.push({ path: `run_summary.${cfgName}.${stat}`, message: 'must be an object with mean and stddev' })
+          continue
+        }
+        for (const field of ['mean', 'stddev']) {
+          const n = v[field]
+          if (typeof n !== 'number' || Number.isNaN(n)) {
+            out.push({ path: `run_summary.${cfgName}.${stat}.${field}`, message: 'must be a number' })
+          }
+        }
+        for (const field of ['min', 'max']) {
+          const n = v[field]
+          if (n !== undefined && (typeof n !== 'number' || Number.isNaN(n))) {
+            out.push({ path: `run_summary.${cfgName}.${stat}.${field}`, message: 'must be a number' })
+          }
+        }
+        for (const key of Object.keys(v)) {
+          if (!BENCHMARK_STAT_FIELD_KEYS.includes(key)) {
+            out.push({ path: `run_summary.${cfgName}.${stat}.${key}`, message: `unknown key "${key}"` })
+          }
+        }
+      }
+      for (const key of Object.keys(cfg)) {
+        if (!BENCHMARK_SUMMARY_STAT_KEYS.includes(key)) {
+          out.push({ path: `run_summary.${cfgName}.${key}`, message: `unknown key "${key}"` })
+        }
+      }
+    }
+    const delta = doc.run_summary.delta
+    if (!isRecord(delta)) {
+      out.push({ path: 'run_summary.delta', message: 'must be an object' })
+    } else {
+      for (const key of BENCHMARK_SUMMARY_STAT_KEYS) {
+        if (!isNonEmptyString(delta[key])) out.push({ path: `run_summary.delta.${key}`, message: 'must be a non-empty string' })
+      }
+      for (const key of Object.keys(delta)) {
+        if (!BENCHMARK_SUMMARY_STAT_KEYS.includes(key)) out.push({ path: `run_summary.delta.${key}`, message: `unknown key "${key}"` })
+      }
+    }
+    for (const key of Object.keys(doc.run_summary)) {
+      if (!BENCHMARK_SUMMARY_KEYS.includes(key)) out.push({ path: `run_summary.${key}`, message: `unknown key "${key}"` })
     }
   }
   if (doc.notes !== undefined) {

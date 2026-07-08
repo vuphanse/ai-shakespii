@@ -71,7 +71,19 @@ const benchmark = () => ({
       result: { pass_rate: 0.85, passed: 6, failed: 1, total: 7, time_seconds: 42.5, tokens: 3800, tool_calls: 18, errors: 0 },
     },
   ],
-  run_summary: { with_skill: { pass_rate: { mean: 0.85 } }, without_skill: { pass_rate: { mean: 0.35 } }, delta: { pass_rate: '+0.50' } },
+  run_summary: {
+    with_skill: {
+      pass_rate: { mean: 0.85, stddev: 0.05, min: 0.8, max: 0.9 },
+      time_seconds: { mean: 45.0, stddev: 12.0 },
+      tokens: { mean: 3800, stddev: 400 },
+    },
+    without_skill: {
+      pass_rate: { mean: 0.35, stddev: 0.08 },
+      time_seconds: { mean: 32.0, stddev: 8.0 },
+      tokens: { mean: 2100, stddev: 300 },
+    },
+    delta: { pass_rate: '+0.50', time_seconds: '+13.0', tokens: '+1700' },
+  },
   notes: ['observation'],
 })
 
@@ -137,12 +149,47 @@ test('benchmark: unknown result key and mistyped tool_calls', () => {
   ])
 })
 
-test('benchmark: run_summary must carry both configurations and delta', () => {
+test('benchmark: run_summary must carry both configurations and delta, with required aggregates', () => {
   const doc = benchmark()
   doc.run_summary = { with_skill: {} } as never
   expect(validateBenchmarkJson(doc)).toEqual([
+    { path: 'run_summary.with_skill.pass_rate', message: 'must be an object with mean and stddev' },
+    { path: 'run_summary.with_skill.time_seconds', message: 'must be an object with mean and stddev' },
+    { path: 'run_summary.with_skill.tokens', message: 'must be an object with mean and stddev' },
     { path: 'run_summary.without_skill', message: 'must be an object' },
     { path: 'run_summary.delta', message: 'must be an object' },
+  ])
+})
+
+test('benchmark: aggregate stat objects require numeric mean and stddev', () => {
+  const doc = benchmark()
+  doc.run_summary.with_skill.pass_rate = { mean: '0.85' } as never
+  expect(validateBenchmarkJson(doc)).toEqual([
+    { path: 'run_summary.with_skill.pass_rate.mean', message: 'must be a number' },
+    { path: 'run_summary.with_skill.pass_rate.stddev', message: 'must be a number' },
+  ])
+})
+
+test('benchmark: unknown keys inside run_summary levels are named', () => {
+  const doc = benchmark()
+  doc.run_summary.with_skill.pass_rate = { mean: 0.85, stddev: 0.05, median: 0.84 } as never
+  ;(doc.run_summary.without_skill as Record<string, unknown>).extra_stat = {}
+  ;(doc.run_summary as Record<string, unknown>).baseline = {}
+  expect(validateBenchmarkJson(doc)).toEqual([
+    { path: 'run_summary.with_skill.pass_rate.median', message: 'unknown key "median"' },
+    { path: 'run_summary.without_skill.extra_stat', message: 'unknown key "extra_stat"' },
+    { path: 'run_summary.baseline', message: 'unknown key "baseline"' },
+  ])
+})
+
+test('benchmark: delta requires the three difference strings', () => {
+  const doc = benchmark()
+  doc.run_summary.delta = { pass_rate: '', bonus: '+1' } as never
+  expect(validateBenchmarkJson(doc)).toEqual([
+    { path: 'run_summary.delta.pass_rate', message: 'must be a non-empty string' },
+    { path: 'run_summary.delta.time_seconds', message: 'must be a non-empty string' },
+    { path: 'run_summary.delta.tokens', message: 'must be a non-empty string' },
+    { path: 'run_summary.delta.bonus', message: 'unknown key "bonus"' },
   ])
 })
 

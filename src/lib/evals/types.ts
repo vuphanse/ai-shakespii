@@ -29,6 +29,19 @@ export interface GradingJson {
   eval_feedback?: Record<string, unknown>
 }
 
+export interface BenchmarkStat {
+  mean: number
+  stddev: number
+  min?: number
+  max?: number
+}
+
+export interface BenchmarkConfigSummary {
+  pass_rate: BenchmarkStat
+  time_seconds: BenchmarkStat
+  tokens: BenchmarkStat
+}
+
 export interface BenchmarkRun {
   eval_id: number
   eval_name?: string
@@ -52,9 +65,9 @@ export interface BenchmarkJson {
   metadata: Record<string, unknown>
   runs: BenchmarkRun[]
   run_summary: {
-    with_skill: Record<string, unknown>
-    without_skill: Record<string, unknown>
-    delta: Record<string, unknown>
+    with_skill: BenchmarkConfigSummary
+    without_skill: BenchmarkConfigSummary
+    delta: { pass_rate: string; time_seconds: string; tokens: string }
   }
   notes?: string[]
 }

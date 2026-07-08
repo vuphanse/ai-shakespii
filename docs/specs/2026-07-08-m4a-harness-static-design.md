@@ -64,7 +64,18 @@ shakespii test <path> [--json]
 
 - Stage order is fixed: `deterministic`, `scenario`, `grading`.
 - `status` is `"fail"` iff the stage produced ≥1 error finding; warnings alone leave it `"pass"`.
-- Findings reuse the lint `Finding` shape (`severity`, `message`, `file`, `line`). Schema-path detail is folded into `message` (e.g. `evals[2].prompt: must be a non-empty string`); `line` is `null` for JSON-document findings.
+- Findings use a distinct harness shape — **not** the lint `Finding` (which requires `ruleId`; harness findings carry none, the enclosing stage already identifies the source):
+
+  ```ts
+  export interface HarnessFinding {
+    severity: Severity      // 'error' | 'warn'
+    message: string
+    file: string            // e.g. 'evals/evals.json', 'SKILL.md'
+    line: number | null     // null for JSON-document findings
+  }
+  ```
+
+  `HarnessFinding` lives in `src/lib/harness/types.ts`. Schema-path detail is folded into `message` (e.g. `evals[2].prompt: must be a non-empty string`). The JSON example above is the byte-stable contract; it contains exactly these four keys per finding.
 - `summary` counts findings across live stages only.
 
 **Pretty output (default) — contractual lines:**
@@ -172,7 +183,7 @@ Enumerated consequences:
 `src/lib/harness/run-dir.ts`:
 
 - Cache root resolution, in order: `SHAKESPII_CACHE_DIR` env var → `$XDG_CACHE_HOME/shakespii` → `~/.cache/shakespii`. The env override is what makes CLI tests hermetic (tests point it at a temp dir). The harness never writes inside the skill directory (corpus stays read-only).
-- `skillContentHash(skill)`: sha256 over SKILL.md raw text plus the sorted inventory (each entry: `relPath`, byte size, text content when textual) — deterministic, unit-tested against fixture mutations (any content change changes the hash; unrelated-order stability).
+- `skillContentHash(dir)`: sha256 over SKILL.md's raw bytes plus, for every inventory file in sorted `relPath` order, the pair (`relPath`, sha256 of the file's **raw bytes read from disk**). Hashing raw bytes — never the parsed `FileEntry.text`, which is `null` for binary and oversized files — guarantees the spec's invariant: *any* byte change in *any* file changes the hash, including a same-size mutation of a binary fixture. Unit tests cover: any content change changes the hash; a same-size binary mutation changes the hash; enumeration-order independence. (This module reads the filesystem by design — the §3 no-filesystem constraint applies to schema validators only.)
 - `runKey({ skillHash, evalId, model })`: first 16 hex chars of `sha256(schemaVersion + '\n' + skillHash + '\n' + String(evalId) + '\n' + model)` where `schemaVersion` is the harness contract version (starts at `1`, bumps when the run-dir layout or grading contract changes, invalidating stale caches).
 - `runDir(root, skillName, key)` → `<root>/runs/<skillName>/<key>/`; `ensureRunDir` creates it.
 - Documented layout (M4b fills it): `outputs/` (executor artifacts + `metrics.json`), `timing.json`, `grading.json`. **Cache-hit definition, fixed now:** a run is cached iff `grading.json` exists under the runKey. Cache granularity is per (skill content, eval case, model) — selective re-runs after single-eval edits.

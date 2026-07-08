@@ -106,23 +106,23 @@ test('case-count warning is suppressed while structural errors exist', () => {
   expect(findings.every(f => f.severity === 'error')).toBe(true)
 })
 
-test('testSkill: stage pipeline shape, summary, and status transitions', () => {
-  const pass = testSkill(skillFromRaw(cleanSkillRaw(), [evalsEntry(validDoc())]))
+test('testSkill: stage pipeline shape, summary, and status transitions', async () => {
+  const pass = await testSkill(skillFromRaw(cleanSkillRaw(), [evalsEntry(validDoc())]))
   expect(pass.stages).toEqual([
     { stage: 'deterministic', status: 'pass', findings: [] },
-    { stage: 'scenario', status: 'unavailable', note: 'ships in M4b' },
-    { stage: 'grading', status: 'unavailable', note: 'ships in M4b' },
+    { stage: 'scenario', status: 'skipped', note: 'pass --run to execute LLM stages' },
+    { stage: 'grading', status: 'skipped', note: 'pass --run to execute LLM stages' },
   ])
   expect(pass.summary).toEqual({ errors: 0, warnings: 0 })
   expect(pass.skill.name).toBe('test-skill')
 
-  const fail = testSkill(skillFromRaw(cleanSkillRaw()))
+  const fail = await testSkill(skillFromRaw(cleanSkillRaw()))
   expect(fail.stages[0]).toMatchObject({ stage: 'deterministic', status: 'fail' })
   expect(fail.summary).toEqual({ errors: 1, warnings: 0 })
 
   const doc = validDoc()
   doc.evals = doc.evals.slice(0, 2)
-  const warnOnly = testSkill(skillFromRaw(cleanSkillRaw(), [evalsEntry(doc)]))
+  const warnOnly = await testSkill(skillFromRaw(cleanSkillRaw(), [evalsEntry(doc)]))
   expect(warnOnly.stages[0]).toMatchObject({ stage: 'deterministic', status: 'pass' })
   expect(warnOnly.summary).toEqual({ errors: 0, warnings: 1 })
 })

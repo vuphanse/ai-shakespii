@@ -1,4 +1,5 @@
 import type { Severity } from '../types'
+import type { ScenarioRunMeta } from './executor'
 
 export interface HarnessFinding {
   severity: Severity
@@ -9,7 +10,9 @@ export interface HarnessFinding {
 
 export type StageReport =
   | { stage: 'deterministic'; status: 'pass' | 'fail'; findings: HarnessFinding[] }
-  | { stage: 'scenario' | 'grading'; status: 'unavailable'; note: 'ships in M4b' }
+  | { stage: 'scenario'; status: 'pass' | 'fail'; findings: HarnessFinding[]; runs: ScenarioRunMeta[] }
+  | { stage: 'grading'; status: 'pass' | 'fail'; findings: HarnessFinding[]; expectations: { passed: number; total: number } }
+  | { stage: 'scenario' | 'grading'; status: 'skipped'; note: string }
 
 export interface TestResult {
   skill: { dir: string; name: string | null }

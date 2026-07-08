@@ -9,7 +9,7 @@ import { buildExecutorPrompt, readValidCachedGrading, stageRunDir } from './exec
 import { gradeCase, gradingFindings } from './grader'
 import { runDir, runKey, skillContentHash } from './run-dir'
 import { deriveMetrics, extractFinalText, renderTranscript } from './stream-json'
-import type { HarnessFinding } from './types'
+import type { HarnessFinding, StageReport } from './types'
 
 export interface LlmStagesOptions {
   runner: ClaudeRunner
@@ -18,27 +18,16 @@ export interface LlmStagesOptions {
   fresh: boolean
 }
 
-export interface ScenarioStage {
-  stage: 'scenario'
-  status: 'pass' | 'fail'
-  findings: HarnessFinding[]
-  runs: ScenarioRunMeta[]
-}
-
-export interface GradingStage {
-  stage: 'grading'
-  status: 'pass' | 'fail'
-  findings: HarnessFinding[]
-  expectations: { passed: number; total: number }
-}
-
 const err = (message: string): HarnessFinding => ({ severity: 'error', message, file: 'evals/evals.json', line: null })
 
 /** Precondition: the deterministic stage ran on this skill with zero errors. */
 export async function runLlmStages(
   skill: ParsedSkill,
   options: LlmStagesOptions,
-): Promise<{ scenario: ScenarioStage; grading: GradingStage }> {
+): Promise<{
+  scenario: Extract<StageReport, { stage: 'scenario'; status: 'pass' | 'fail' }>
+  grading: Extract<StageReport, { stage: 'grading'; status: 'pass' | 'fail' }>
+}> {
   const entry = skill.files.find(f => f.relPath === 'evals/evals.json')
   if (!entry || entry.text === null) throw new Error('internal: runLlmStages requires a deterministic-clean eval suite')
   const doc = JSON.parse(entry.text) as EvalsJson

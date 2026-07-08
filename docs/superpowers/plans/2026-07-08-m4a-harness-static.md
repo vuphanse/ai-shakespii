@@ -2350,12 +2350,18 @@ Update the status line/paragraph that currently ends at M3b to state that M4a (h
 
 - [ ] **Step 5: Sync mirrors and verify**
 
+Every doc this task touches that has a canonical mirror gets copied and cmp-verified. The existing mirror locations are: `LINT-RULES.md` under `specs/`, `ROADMAP.md` under `plans/`; `HARNESS.md` is new and goes to `knowledge-references/`. (`README.md` has no canonical mirror — it is repo-only, consistent with prior milestones.)
+
 ```bash
 cp docs/HARNESS.md ~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/HARNESS.md
+cp docs/LINT-RULES.md ~/.ai-pref-nsync/local-docs/ai-shakespii/specs/LINT-RULES.md
+cp docs/ROADMAP.md ~/.ai-pref-nsync/local-docs/ai-shakespii/plans/ROADMAP.md
 cmp docs/HARNESS.md ~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/HARNESS.md
+cmp docs/LINT-RULES.md ~/.ai-pref-nsync/local-docs/ai-shakespii/specs/LINT-RULES.md
+cmp docs/ROADMAP.md ~/.ai-pref-nsync/local-docs/ai-shakespii/plans/ROADMAP.md
 ```
 
-Expected: `cmp` silent.
+Expected: all three `cmp` invocations silent (exit 0).
 
 - [ ] **Step 6: Full suite, then commit**
 

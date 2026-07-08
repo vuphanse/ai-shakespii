@@ -1,0 +1,19 @@
+{
+  "skill_name": "someone-else",
+  "notes": "extra",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "First case prompt.",
+      "expected_output": "Output.",
+      "files": ["../escape.md", "evals/files/missing.md"],
+      "expectations": ["Has output."]
+    },
+    {
+      "id": 1,
+      "prompt": "Duplicate id case.",
+      "expected_output": "Output.",
+      "expectations": []
+    }
+  ]
+}

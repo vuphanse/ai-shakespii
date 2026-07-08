@@ -9,6 +9,7 @@ const USAGE = `usage: shakespii <command>
 commands:
   init <name> [--description "..."]   scaffold a new skill (intentionally lint-RED)
   lint <path> [--json] [--corpus] [--config <file>]   lint a skill directory or corpus root
+  test <path> [--json]                run static harness checks on a skill's eval suite
 
 flags: --help, --version`
 
@@ -20,6 +21,10 @@ async function main(): Promise<number> {
     case 'lint': {
       const { runLint } = await import('./lint')
       return runLint(rest)
+    }
+    case 'test': {
+      const { runTest } = await import('./test')
+      return runTest(rest)
     }
     case '--version': {
       const pkg = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')) as { version: string }

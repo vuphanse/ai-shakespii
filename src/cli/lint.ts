@@ -3,6 +3,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { lintCorpus } from '../lib/corpus'
 import { runRules } from '../lib/engine'
 import { parseSkill } from '../lib/parser'
+import { loadConfigOverride } from '../lib/profile/config'
 import { loadProfile } from '../lib/profile/load'
 import type { Profile } from '../lib/types'
 import { jsonCorpusReport } from './format/corpus-json'
@@ -11,12 +12,25 @@ import { jsonReport } from './format/json'
 import { formatPretty } from './format/pretty'
 import { defaultProfilePath } from './paths'
 
-const USAGE = 'usage: shakespii lint <path> [--json] [--corpus]'
+const USAGE = 'usage: shakespii lint <path> [--json] [--corpus] [--config <file>]'
 
 export function runLint(argv: string[]): number {
   const json = argv.includes('--json')
   const corpus = argv.includes('--corpus')
-  const positionals = argv.filter(a => a !== '--json' && a !== '--corpus')
+  const rest = argv.filter(a => a !== '--json' && a !== '--corpus')
+  let configPath: string | null = null
+  const positionals: string[] = []
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i] === '--config') {
+      if (i + 1 === rest.length) {
+        console.error(USAGE)
+        return 2
+      }
+      configPath = rest[++i]
+    } else {
+      positionals.push(rest[i])
+    }
+  }
   if (positionals.length !== 1) {
     console.error(USAGE)
     return 2
@@ -27,6 +41,14 @@ export function runLint(argv: string[]): number {
   } catch (e) {
     console.error(`profile unreadable: ${(e as Error).message}`)
     return 2
+  }
+  if (configPath !== null) {
+    try {
+      profile = loadConfigOverride(resolve(configPath), profile)
+    } catch (e) {
+      console.error((e as Error).message)
+      return 2
+    }
   }
 
   if (corpus) {

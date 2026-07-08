@@ -16,7 +16,7 @@ User adjudications from the M3b brainstorm (2026-07-08) — these are settled, n
 | Corpus mode scope | Full lint: every discovered skill gets the complete 24-rule single-skill lint, plus XS01/XS02 across the corpus, in one invocation |
 | Architecture | Approach A: thin corpus loop reusing the existing parser and engine per skill, XS rules in a separate registry with their own signature; the single-skill code path is untouched |
 | Config lookup | `--config` flag only. No auto-discovery: the same input always produces the same findings unless the caller explicitly passes overrides |
-| ST04 quoted utterances | Verify, then decide: an empirical check of Claude Code's `@`-expansion inside quoted text gates whether ST04 gains an exemption (§5) |
+| ST04 quoted utterances | Verify, then decide: an autonomous headless experiment (with a positive control) checks whether Claude Code's `@`-expansion fires inside quoted text and gates whether ST04 gains an exemption; an inconclusive result defaults to no rule change (§5) |
 | HY05 compound commands | Segment-scan: split unfenced lines on shell operators and check each segment, without adding `cd` to the command list (§6) |
 
 Severity policy carries over from M3a §0: no severity in `profiles/default.yaml` changes in this
@@ -213,31 +213,45 @@ Whether these are true positives depends on a runtime fact nobody has verified: 
 Code's `@`-expansion force-load the referenced file even when the `@`-path sits inside quoted
 illustrative text?
 
-**Experiment protocol (operator-assisted — needs a live Claude Code session, not
-subagent-runnable):**
+**Experiment protocol (autonomous — headless, subagent-runnable):**
 
 1. Create a throwaway project directory with a *project-scoped* probe skill
-   (`<scratch>/.claude/skills/st04-probe/SKILL.md`) whose body contains exactly one
-   quoted-utterance line with an `@`-path pointing at a marker file carrying a distinctive
-   sentinel string. `~/.claude/skills/` is never touched — the probe loads through Claude Code's
-   project skill root.
-2. Trigger the probe skill in a live session started in that directory; inspect whether the
-   sentinel content entered the context.
-3. Record the observed behavior verbatim (what was injected, under which mechanic) in
-   docs/LINT-RULES.md's ST04 evidence row and in the M3b calibration doc.
+   (`<scratch>/.claude/skills/st04-probe/SKILL.md`). `~/.claude/skills/` is never touched — the
+   probe loads through Claude Code's project skill root. Two probe variants, run separately:
+   - **Control:** the probe body contains one *unquoted* `@`-path line pointing at marker file A
+     (distinctive sentinel string `ST04-CONTROL-<random>`).
+   - **Subject:** the probe body contains one quoted-utterance line
+     (`- *"run SDD on the spec @<path-to-marker-B>"*`) pointing at marker file B (sentinel
+     `ST04-SUBJECT-<random>`).
+2. For each variant, run a headless session in that directory —
+   `claude -p "<prompt that triggers the probe skill>"` — where the prompt also instructs the
+   model to reply stating verbatim which sentinel strings it can see in its context.
+3. Observe two independent signals per run: (a) the model's own report, and (b) a grep for the
+   sentinel over the session transcript JSONL under `~/.claude/projects/<encoded-dir>/`. A
+   sentinel counts as force-loaded only when signal (b) confirms it entered the context.
+4. Record commands, transcript evidence, and both signals verbatim in docs/LINT-RULES.md's ST04
+   evidence row and in the M3b calibration doc.
 
-**Decision gate:**
+**Decision gate (every branch executable autonomously):**
 
-- **Expansion fires inside quotes** → the five findings are true positives. No code change.
-  Remediation for the kickoff skills is backticking the paths — a corpus edit, which stays the
-  user's call outside this milestone (corpus is read-only during calibration).
-- **Expansion does not fire** → implement a narrow exemption: an `@`-token inside a quoted span
-  (straight `"…"` or curly `“…”` quotes) on the same line does not fire. TDD: RED fixture for
-  the exemption plus a still-fires regression (unquoted `@`-link on the same line as a quoted
-  phrase) before the code change.
+- **Control positive, subject positive** (expansion fires inside quotes) → the five findings are
+  true positives. No code change. Remediation for the kickoff skills is backticking the paths —
+  a corpus edit, which stays the user's call outside this milestone (corpus is read-only during
+  calibration).
+- **Control positive, subject negative** (expansion respects quoting) → implement a narrow
+  exemption: an `@`-token inside a quoted span (straight `"…"` or curly `“…”` quotes) on the
+  same line does not fire. TDD: RED fixture for the exemption plus a still-fires regression
+  (unquoted `@`-link on the same line as a quoted phrase) before the code change.
+- **Control negative or otherwise inconclusive** (the probe skill did not load headlessly, the
+  control `@`-path did not force-load, or the two signals disagree) → the experiment cannot
+  decide. **Default: no rule change** — ST04 keeps firing (the conservative branch: an exemption
+  adopted without evidence could blind the rule to a real force-load vector). The inconclusive
+  observation is recorded in the calibration doc together with a deferred follow-up: re-run the
+  experiment in a live interactive session, an operator decision outside this milestone.
 
-Either branch ends with the outcome documented; the rule's contract in docs/LINT-RULES.md is
-updated to state the verified behavior rather than an assumption.
+Every branch ends with the outcome documented; the rule's contract in docs/LINT-RULES.md is
+updated to state the verified (or explicitly unverified-and-defaulted) behavior rather than an
+assumption.
 
 ## §6 HY05 — compound-command segment scan
 
@@ -302,8 +316,8 @@ The fourth row makes the sweep double as a regression gate for the corpus loop i
 runs via `shakespii lint --corpus` on each of the two roots (one invocation per root — multi-root
 is a non-goal), and `scripts/calibrate.ts` is refactored to drive `lintCorpus` directly, deleting
 its hand-rolled two-root walking logic — the calibration script becomes the first dogfood
-consumer of the new API. ST04's post-experiment behavior (§5) is recorded in the same doc
-(docs/CALIBRATION-M3B.md).
+consumer of the new API. ST04's post-experiment behavior (§5) — including, if it comes to that,
+the inconclusive-and-defaulted branch — is recorded in the same doc (docs/CALIBRATION-M3B.md).
 
 ## §9 Companion skill and documentation updates
 

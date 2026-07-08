@@ -1,0 +1,37 @@
+{
+  "skill_name": "compress",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Compress the memory file evals/files/sample-memory.md to save tokens.",
+      "expected_output": "The file is rewritten in caveman-compressed form; every URL and fenced code block survives verbatim; a human-readable backup lands next to the file as sample-memory.original.md.",
+      "files": ["evals/files/sample-memory.md"],
+      "expectations": [
+        "All URLs from the input survive verbatim",
+        "All fenced code blocks survive byte-identical",
+        "The compressed file is smaller than the input",
+        "A backup file named sample-memory.original.md is created"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Compress evals/files/code-only.md.",
+      "expected_output": "No material compression is possible: the file is a single fenced code block, which the skill must preserve byte-identical.",
+      "files": ["evals/files/code-only.md"],
+      "expectations": [
+        "The fenced code block is byte-identical after compression",
+        "No code content is reworded or dropped"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Compress evals/files/already-compressed.md a second time.",
+      "expected_output": "Idempotent behavior: a file already in caveman form gains no further material compression and loses no technical content.",
+      "files": ["evals/files/already-compressed.md"],
+      "expectations": [
+        "All URLs and identifiers survive the second pass",
+        "The file does not grow"
+      ]
+    }
+  ]
+}

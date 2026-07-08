@@ -90,6 +90,33 @@ test('minSkills 3 suppresses a two-skill duplicate', () => {
   expect(XS01.check(skills, smallCtx(5, 2))).toHaveLength(1)
 })
 
+test('a shorter duplicated block contained in a longer same-skill-set block is suppressed', () => {
+  const proc = `p-one\np-two\n${block(8)}\ns-one\ns-two`
+  const skills = corpusFromRaws(
+    [withProcedure('Alpha', `${proc}\n\nBridge prose here.\n\n${block(8)}`), withProcedure('Beta', proc)],
+    ['dup-a', 'dup-b'],
+  )
+  const f = XS01.check(skills, smallCtx(5, 2))
+  expect(f).toHaveLength(1)
+  expect(f[0].message).toBe('13-line block shared by 2 skills — extract to a shared reference')
+  expect(f[0].sites.map(s => s.skill)).toEqual(['dup-a', 'dup-b'])
+})
+
+test('a shorter block with a superset skill set survives even when its text is contained in a longer block', () => {
+  const proc = `p-one\np-two\n${block(8)}\ns-one\ns-two`
+  const skills = corpusFromRaws(
+    [withProcedure('Alpha', proc), withProcedure('Beta', proc), withProcedure('Gamma', block(8))],
+    ['dup-a', 'dup-b', 'dup-c'],
+  )
+  const f = XS01.check(skills, smallCtx(5, 2))
+  expect(f).toHaveLength(2)
+  const long = f.find(x => x.sites.length === 2)!
+  const short = f.find(x => x.sites.length === 3)!
+  expect(long.sites.map(s => s.skill)).toEqual(['dup-a', 'dup-b'])
+  expect(short.sites.map(s => s.skill)).toEqual(['dup-a', 'dup-b', 'dup-c'])
+  expect(short.message).toBe('8-line block shared by 3 skills — extract to a shared reference')
+})
+
 test('reported line ranges are original file coordinates', () => {
   const shared = block(16)
   const raw = withProcedure('Alpha', shared)

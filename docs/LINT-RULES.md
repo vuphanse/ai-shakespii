@@ -65,6 +65,7 @@ Section presence for CT01–CT07 is matched via the anatomy alias table in `prof
 - **HY04** — a magnitude number (`\d+` with optional decimal and `K`/`M`/`B` suffix) within 6 tokens of a rot noun (`installs`, `downloads`, `stars`, `users`, `leaderboard`, `rank`/`ranking`) fires. Exempt when the skill carries frontmatter `version` **and** a `/last reviewed/i` marker in SKILL.md or an md sibling. **Post-calibration refinement (docs/CALIBRATION-M3.md):** a magnitude token is skipped when it is a leading ordered-list marker (e.g. `2.`, optionally after heading hashes as in `### 2.`) or immediately preceded by `Step`/`Steps`, so list numbering and `### Step N:` headings no longer false-positive against a nearby rot noun.
 - **HY05** — a line starting (after an optional `$ `) with a known lowercase command word (`git`, `bun`, `npm`, `npx`, `node`, `python`, `python3`, `pip`, `pip3`, `brew`, `curl`, `wget`, `make`, `docker`, `cargo`, `go`, `shakespii`, `whisper`, `claude`) **and** whose remainder carries a flag (`-x`/`--flag`) or a path-ish token (contains `/` or a file extension) fires. The command-word match is case-sensitive lowercase, so sentence-initial prose ("Go to docs/…", "Make sure…") stays silent; the argument requirement keeps prose like "git history proves it" silent. As of M3b, unfenced lines are additionally split on `&&`, `||`, and `;`, and every segment's leading word is checked (the `$ ` prompt prefix stays legal only at true line start); one finding per line. Single `|` deliberately does not split — an unfenced table row documenting commands (`| git status | … |`) must not fire. This closes the compress compound-command miss documented in CALIBRATION-M3.
 - **HY06** — a `%` figure or `Nx` multiplier within 8 tokens of a claim word (`save`/`savings`/`saved`, `faster`, `speedup`, `reduc-`, `compress-`, `improvement`, `smaller`) fires. Exempt when the skill ships `evals/evals.json` (inventory check) or the line contains `unverified`/`anecdotal`.
+- **TR01** — at most one finding per skill, three shapes: no `evals/evals.json` in the inventory; the file fails validation (the finding carries the error count and delegates detail to `shakespii test` — TR01 calls the harness's deterministic stage, so lint and test can never disagree); or a valid file with fewer than `minCases` (default 3) cases. Detail lives in the harness by design (ST02/CT02 dedup precedent).
 
 ## XS — Cross-skill (needs corpus context)
 
@@ -106,3 +107,10 @@ lint --corpus` (docs/CALIBRATION-M3B.md); `--config` profile overrides shipped
 (severity error|warn|off, option merge, alias replacement, fail-loud validation);
 HY05 gained the compound-command segment scan; ST04's quoted-utterance question was
 resolved by the recorded experiment. TR01/TR02 remain pending M4 (harness-backed).
+
+**M4a completion (2026-07-08):** TR01 is implemented and live (warn,
+single-finding cap, delegating validation to the harness deterministic stage —
+docs/HARNESS.md, docs/CALIBRATION-M4A.md). The scaffold template and the
+using-shakespii evals migrated from a pre-schema shape (`skill` key, string
+ids) to the skill-creator schema (`skill_name`, integer ids). TR02 remains
+pending M4b (requires live trigger runs).

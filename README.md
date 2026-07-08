@@ -6,7 +6,7 @@ Most prompt tools focus on writing better prompts. ai-shakespii focuses on desig
 
 ## Status
 
-**M3b shipped — corpus mode and config overrides are live.** `git clone` + `bun install` + `bun link` gives you `shakespii init` and `shakespii lint` (full single-skill rule catalog, pretty + `--json` output), plus `--corpus` for cross-skill XS01/XS02 checks and `--config` for profile overrides, and `skills/using-shakespii/` teaches agents to drive them (see the install section below). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M4 (the test harness).
+**M4a shipped — the test harness's static half is live.** `git clone` + `bun install` + `bun link` gives you `shakespii init`, `shakespii lint` (full single-skill rule catalog, pretty + `--json` output, plus `--corpus` for cross-skill XS01/XS02 checks and `--config` for profile overrides), and `shakespii test` (skill-creator eval-suite validation, TR01, run-dir/cache skeleton), and `skills/using-shakespii/` teaches agents to drive them (see the install section below). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M4b (the harness's LLM half — scenario runs and grading).
 
 ## Install the companion skill
 
@@ -26,7 +26,7 @@ A CLI (`shakespii`) that operates on standard Agent Skills (`SKILL.md` format):
 - `shakespii lint <path>` — validate a skill against the rule catalog; `--corpus`
   lints a whole directory of skills (cross-skill XS rules included) and `--config`
   applies profile overrides
-- `shakespii test <path>` — run a skill's eval cases against representative scenarios
+- `shakespii test <path> [--json]` — static harness checks of a skill's eval suite: skill-creator schema validation, cross-document checks, fixture resolution. Scenario runs and LLM grading land in M4b.
 - Writer and publishing workflows come later (see roadmap)
 
 The differentiator is **enforcement**: the ecosystem already has skill-writing guidance (superpowers `writing-skills`, Anthropic's `skill-creator`), but nothing lints skills and nothing runs their evals. Our July 2026 audit of 30 installed skills found zero versioned skills, zero working test harnesses, and large-scale copy-paste duplication — see the audit doc.

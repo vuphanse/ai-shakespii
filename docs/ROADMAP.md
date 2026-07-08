@@ -40,12 +40,21 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 - [x] Cross-skill rules XS01/XS02 (corpus-context mode: `shakespii lint --corpus ~/.claude/skills`)
 - [x] Config file for profile overrides
 
-## M4 — Test harness
+## M4a — Test harness, static half (done 2026-07-08)
 
-- [ ] Adopt skill-creator schemas (`evals.json` / `grading.json` / `benchmark.json`)
-- [ ] `shakespii test <path>`: deterministic checks first, then headless scenario runs via `claude -p` / Agent SDK, then LLM rubric grading; cached, on-demand
+- [x] Adopt skill-creator schemas: TS types + validators for `evals.json` / `grading.json` / `benchmark.json` (the latter two are M4b's output contracts)
+- [x] `shakespii test <path> [--json]`: stage pipeline with the deterministic stage live (schema validation, cross-document checks, fixture resolution); `scenario`/`grading` report unavailable until M4b
+- [x] TR01 lint rule (warn, single-finding cap, delegates to the harness)
+- [x] Run-dir/cache skeleton (byte-level content hash, per-eval runKey, XDG-aware cache root)
+- [x] First fixture: the repaired compress benchmark (`tests/fixtures/harness/compress`)
+
+## M4b — Test harness, LLM half
+
+- [ ] Headless executor scenario runs via `claude -p` (ST04 probe mechanics)
+- [ ] LLM rubric grading writing `grading.json` (M4a validators are the contract); cached per (skill content, eval, model), on-demand
 - [ ] Trigger-accuracy eval (TR02) per skill-creator's design
-- [ ] First fixture: the repaired compress benchmark
+- [ ] Benchmark stats (`benchmark.json`, with/without skill) and the `--fresh` flag
+- [ ] Live-compress evals sync (user sign-off; attached to the personal-skill-migration decision)
 
 ## M5 — Writer + publishing
 

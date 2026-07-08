@@ -16,8 +16,8 @@ test('KEYSTONE: the repaired compress fixture passes the deterministic stage byt
     skill: { dir: COMPRESS, name: 'compress' },
     stages: [
       { stage: 'deterministic', status: 'pass', findings: [] },
-      { stage: 'scenario', status: 'unavailable', note: 'ships in M4b' },
-      { stage: 'grading', status: 'unavailable', note: 'ships in M4b' },
+      { stage: 'scenario', status: 'skipped', note: 'pass --run to execute LLM stages' },
+      { stage: 'grading', status: 'skipped', note: 'pass --run to execute LLM stages' },
     ],
     summary: { errors: 0, warnings: 0 },
   })
@@ -36,5 +36,5 @@ test('KEYSTONE: missing evals fails with the contractual message and exit 1', ()
 test('KEYSTONE: pretty summary line on the compress fixture', () => {
   const r = run(['test', COMPRESS])
   expect(r.exitCode).toBe(0)
-  expect(r.stdout.toString()).toContain('deterministic: 0 errors, 0 warnings · scenario/grading pending M4b')
+  expect(r.stdout.toString()).toContain('deterministic: 0 errors, 0 warnings · scenario/grading skipped (pass --run)')
 })

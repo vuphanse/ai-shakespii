@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtempSync } from 'node:fs'
+import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -52,8 +52,8 @@ test('pretty output carries the contractual stage and summary lines', () => {
   expect(r.exitCode).toBe(0)
   const out = r.stdout.toString()
   expect(out).toContain('deterministic  PASS')
-  expect(out).toContain('scenario       unavailable (ships in M4b)')
-  expect(out).toContain('deterministic: 0 errors, 1 warning · scenario/grading pending M4b')
+  expect(out).toContain('scenario       skipped (pass --run to execute LLM stages)')
+  expect(out).toContain('deterministic: 0 errors, 1 warning · scenario/grading skipped (pass --run)')
 })
 
 test('a file path is rejected: the target must be a directory (spec §2)', () => {
@@ -70,10 +70,22 @@ test('a nonexistent path is rejected as not a directory', () => {
 })
 
 test('unknown option: loud failure, exit 2', () => {
-  const r = run(['test', join(FIXTURES, 'two-cases'), '--fresh'])
+  const r = run(['test', join(FIXTURES, 'two-cases'), '--bogus'])
   expect(r.exitCode).toBe(2)
-  expect(r.stderr.toString()).toContain('unknown option: --fresh')
-  expect(r.stderr.toString()).toContain('usage: shakespii test <path> [--json]')
+  expect(r.stderr.toString()).toContain('unknown option: --bogus')
+  expect(r.stderr.toString()).toContain('usage: shakespii test <path> [--json] [--run] [--fresh] [--model <name>]')
+})
+
+test('--fresh and --model require --run; --model requires a value', () => {
+  const fresh = run(['test', join(FIXTURES, 'two-cases'), '--fresh'])
+  expect(fresh.exitCode).toBe(2)
+  expect(fresh.stderr.toString()).toContain('--fresh requires --run')
+  const model = run(['test', join(FIXTURES, 'two-cases'), '--model', 'sonnet'])
+  expect(model.exitCode).toBe(2)
+  expect(model.stderr.toString()).toContain('--model requires --run')
+  const noValue = run(['test', join(FIXTURES, 'two-cases'), '--run', '--model'])
+  expect(noValue.exitCode).toBe(2)
+  expect(noValue.stderr.toString()).toContain('--model requires a value')
 })
 
 test('missing path / extra positional: usage, exit 2', () => {
@@ -96,5 +108,33 @@ test('--json stdout is pure JSON', () => {
 
 test('top-level usage lists the test command', () => {
   const r = run(['--help'])
-  expect(r.stdout.toString()).toContain('test <path> [--json]')
+  expect(r.stdout.toString()).toContain('test <path> [--json] [--run]')
+})
+
+test('--run end to end with a failing stub claude: scenario findings, runs metadata, exit 1', () => {
+  const stubDir = mkdtempSync(join(tmpdir(), 'shakespii-claude-stub-'))
+  writeFileSync(join(stubDir, 'claude'), '#!/bin/sh\necho "stub cannot run" >&2\nexit 3\n')
+  chmodSync(join(stubDir, 'claude'), 0o755)
+  const cache = mkdtempSync(join(tmpdir(), 'shakespii-cli-cache-'))
+  const r = Bun.spawnSync(['bun', CLI, 'test', join(FIXTURES, 'compress'), '--run', '--json'], {
+    cwd: tmpdir(),
+    env: { ...process.env, PATH: `${stubDir}:${process.env.PATH}`, SHAKESPII_CACHE_DIR: cache },
+  })
+  expect(r.exitCode).toBe(1)
+  const rep = JSON.parse(r.stdout.toString())
+  expect(rep.stages[1].status).toBe('fail')
+  expect(rep.stages[1].findings[0].message).toContain('eval 1: executor nonzero-exit')
+  expect(rep.stages[1].runs).toHaveLength(3)
+  expect(rep.stages[2]).toEqual({ stage: 'grading', status: 'pass', findings: [], expectations: { passed: 0, total: 0 } })
+})
+
+test('--run without claude on PATH: exit 2 with the contractual message', () => {
+  const emptyPath = mkdtempSync(join(tmpdir(), 'shakespii-empty-path-'))
+  const cache = mkdtempSync(join(tmpdir(), 'shakespii-cli-cache2-'))
+  const r = Bun.spawnSync([process.execPath, CLI, 'test', join(FIXTURES, 'compress'), '--run'], {
+    cwd: tmpdir(),
+    env: { ...process.env, PATH: emptyPath, SHAKESPII_CACHE_DIR: cache },
+  })
+  expect(r.exitCode).toBe(2)
+  expect(r.stderr.toString()).toContain('test failed: claude CLI not found — install Claude Code or put claude on PATH')
 })

@@ -47,3 +47,11 @@ test('evals.json carries the skill-creator shape with the five anchored cases', 
     expect(evals.evals.some(c => c.prompt.includes(anchor))).toBe(true)
   }
 })
+
+test('shakespii test passes on the weld skill', () => {
+  const r = Bun.spawnSync(['bun', CLI, 'test', SKILL_DIR, '--json'])
+  expect(r.exitCode).toBe(0)
+  const rep = JSON.parse(r.stdout.toString())
+  expect(rep.summary).toEqual({ errors: 0, warnings: 0 })
+  expect(rep.stages[0]).toEqual({ stage: 'deterministic', status: 'pass', findings: [] })
+})

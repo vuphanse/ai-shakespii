@@ -7,6 +7,18 @@ finding with no entry is fixed from its own `message`.
 Every entry: what the rule demands, why it usually fires, the minimal fix, and a
 before → after sketch.
 
+## Contents
+
+- [FM01 — frontmatter well-formed](#fm01--frontmatter-well-formed)
+- [FM02 — name discipline](#fm02--name-discipline)
+- [FM04 — trigger-first description](#fm04--trigger-first-description)
+- [CT03 — concrete worked example](#ct03--concrete-worked-example)
+- [ST02 — link targets exist](#st02--link-targets-exist)
+- [PH01 — no placeholder tokens](#ph01--no-placeholder-tokens)
+- [TR01 — skill ships a valid evals suite](#tr01--skill-ships-a-valid-evals-suite)
+- [XS01 — duplicate block across skills (corpus mode)](#xs01--duplicate-block-across-skills-corpus-mode)
+- [XS02 — near-clone skills (corpus mode)](#xs02--near-clone-skills-corpus-mode)
+
 ## FM01 — frontmatter well-formed
 
 - Contract: `SKILL.md` opens with a YAML frontmatter block carrying `name` and
@@ -71,6 +83,19 @@ before → after sketch.
   not a fix — that trades a placeholder finding for a missing-section finding.
 - Before → after: a section whose only body is the scaffold placeholder line → that
   section written out with real content.
+
+## TR01 — skill ships a valid evals suite
+
+Finding shapes: `skill ships no evals/evals.json`, `evals/evals.json fails
+validation (N errors)`, `only N eval case(s)`.
+
+Fix: author `evals/evals.json` at the skill root in the skill-creator shape —
+top-level `skill_name` (must equal the frontmatter `name`) and `evals`, an
+array of at least three cases, each `{ id (unique integer), prompt,
+expected_output, files (optional, paths that exist inside the skill dir),
+expectations (non-empty string array) }`. Then run `shakespii test <dir>
+--json` for the full diagnostic list (lint caps TR01 at one finding per
+skill) and fix findings until exit 0.
 
 ## XS01 — duplicate block across skills (corpus mode)
 

@@ -1,7 +1,7 @@
 ---
 name: using-shakespii
 description: "Use when creating a new agent skill or auditing, linting, or fixing an existing one — drives the shakespii CLI (init, lint --json) to scaffold standard SKILL.md skills and resolve findings until clean."
-version: 0.2.0
+version: 0.3.0
 ---
 
 # using-shakespii
@@ -54,6 +54,24 @@ Audit branch — fix an existing skill:
    trigger; do not rewrite what the skill is for.
 7. Report before/after finding counts, what changed per rule, and any warnings left
    standing with reasons.
+
+### Testing a skill's evals
+
+After a skill lints clean, verify its eval suite with the static harness:
+
+```bash
+shakespii test <skill-dir> --json
+```
+
+Exit codes: 0 = deterministic stage passed (warnings allowed), 1 = error
+findings to fix, 2 = the run itself failed (bad path, no SKILL.md). The
+deterministic stage checks that `evals/evals.json` exists, parses, follows
+the skill-creator schema (`skill_name` equal to the frontmatter name, unique
+integer ids, non-empty prompts and expectations, at least three cases), and
+references only files that exist inside the skill directory. The `scenario`
+and `grading` stages report `unavailable` until the LLM half of the harness
+ships. Fix loop: read `stages[0].findings[].message` — each message carries
+the JSON path of the defect — correct `evals/evals.json`, re-run until exit 0.
 
 Authoring branch — create a new skill:
 

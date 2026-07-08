@@ -13,11 +13,22 @@ export function jsonTestReport(result: TestResult): TestJsonReport {
     version: 1,
     mode: 'test',
     skill: result.skill,
-    stages: result.stages.map(s =>
-      s.stage === 'deterministic'
-        ? { stage: s.stage, status: s.status, findings: s.findings.map(f => ({ severity: f.severity, message: f.message, file: f.file, line: f.line })) }
-        : { stage: s.stage, status: s.status, note: s.note },
-    ),
+    stages: result.stages.map((s): StageReport => {
+      if (s.status === 'skipped') return { stage: s.stage, status: s.status, note: s.note }
+      const findings = s.findings.map(f => ({ severity: f.severity, message: f.message, file: f.file, line: f.line }))
+      if (s.stage === 'scenario') {
+        return {
+          stage: s.stage,
+          status: s.status,
+          findings,
+          runs: s.runs.map(r => ({ evalId: r.evalId, cached: r.cached, status: r.status, durationSeconds: r.durationSeconds })),
+        }
+      }
+      if (s.stage === 'grading') {
+        return { stage: s.stage, status: s.status, findings, expectations: { passed: s.expectations.passed, total: s.expectations.total } }
+      }
+      return { stage: s.stage, status: s.status, findings }
+    }),
     summary: result.summary,
   }
 }

@@ -29,7 +29,7 @@ Locked upstream decisions this spec builds on: reuse skill-creator eval schemas 
 
 **Out (M4b, own brainstorm→spec cycle):** executor scenario runs, LLM grading, TR02 trigger eval, benchmark statistics, `--fresh` flag, live-compress sync.
 
-**Untouched:** the frozen single-skill lint CLI surface (`shakespii lint <path> [--json]` plus M3b's `--corpus`/`--config`), lint JSON v1 byte-compatibility, `profiles/default.yaml` severities/options for existing rules (TR01 is an addition), `shakespii init` scaffold content, the read-only dogfood corpus.
+**Untouched:** the frozen single-skill lint CLI surface (`shakespii lint <path> [--json]` plus M3b's `--corpus`/`--config`), lint JSON v1 byte-compatibility, `profiles/default.yaml` (the TR01 entry pre-existed with `minCases: 3` — no profile edit ships), the read-only dogfood corpus. Plan-time amendment (§12): `templates/skill/evals/evals.json` migrates from a deviant pre-schema shape (`skill` key, string ids) to the skill-creator schema; fresh scaffolds now carry schema-valid placeholder evals.
 
 ## §2 CLI surface
 
@@ -143,7 +143,7 @@ export function validateBenchmarkJson(doc: unknown): SchemaDiagnostic[]
 `src/lib/harness/deterministic.ts`, orchestrated by `src/lib/harness/index.ts` `runTest(dir)`:
 
 1. Parse the skill with the existing parser (`parseSkill`). Parse failure at the file level (unreadable SKILL.md) is a run error → exit 2. A parseable-but-lint-dirty skill is fine — `test` does not re-lint; lint and test are separate commands.
-2. `evals/evals.json` missing from the skill inventory → single **error** finding: `no evals/evals.json — author evals first (see TR01); shakespii test requires a reproducible eval suite`. Stage fails, exit 1. This is the enforcement teeth and the free `init → test` RED loop: a raw scaffold fails `shakespii test` without any init changes.
+2. `evals/evals.json` missing from the skill inventory → single **error** finding: `no evals/evals.json — author evals first (see TR01); shakespii test requires a reproducible eval suite`. Stage fails, exit 1. This is the enforcement teeth. (Plan-time amendment, §12: the migrated scaffold template ships schema-valid placeholder evals, so a fresh scaffold passes the deterministic stage; placeholder enforcement remains lint/PH01's job.)
 3. File present but not valid JSON → single **error** finding with the parse position folded into the message.
 4. `validateEvalsJson` diagnostics → one **error** finding each (`${path}: ${message}` in the message field).
 5. Cross-document checks (§3) → **error** findings: name mismatch (`skill_name "x" does not match frontmatter name "y"`), unresolvable or escaping `files` entries (one finding per entry).
@@ -153,7 +153,7 @@ Ordering within findings: file-level first (missing/unparseable), then validator
 
 ## §5 TR01 lint rule
 
-`src/lib/rules/TR01.ts`, registered in the standard single-skill registry; severity **warn** in `profiles/default.yaml` (an addition — existing entries untouched). Evidence line in LINT-RULES already present (Anthropic "minimum three evaluations"; compress's fixtures break because they don't resolve relative to the skill).
+`src/lib/rules/TR01.ts`, registered in the standard single-skill registry; severity **warn** via the pre-existing `profiles/default.yaml` entry (`TR01: { severity: warn, options: { minCases: 3 } }` — no profile edit ships; the implementation consumes `options.minCases`). Evidence line in LINT-RULES already present (Anthropic "minimum three evaluations"; compress's fixtures break because they don't resolve relative to the skill).
 
 Pure function over `ParsedSkill`. At most **one finding per skill** — the most fundamental defect:
 
@@ -173,8 +173,8 @@ Adding TR01 changes lint output everywhere a skill ships no evals. The governing
 
 Enumerated consequences:
 
-- **Scaffold keystone** (`tests/cli/keystone.test.ts`): raw scaffold expectation amends from `{ errors: 20, warnings: 0 }` to `{ errors: 20, warnings: 1 }` — the one new warning is TR01 shape 1. The scaffold stays intentionally RED; `shakespii init` output is not modified.
-- **Weld invariant** (`tests/skill/using-shakespii.test.ts`): `skills/using-shakespii/` gets a real, authored `evals/evals.json` (≥3 cases — see §8), keeping the weld at `{ errors: 0, warnings: 0 }`. using-shakespii becomes the first TR01-clean skill.
+- **Scaffold keystone** (`tests/cli/keystone.test.ts`): unchanged at `{ errors: 20, warnings: 0 }` — the template's evals.json migrates to the skill-creator shape (§12) and validates structurally, so TR01 stays silent on fresh scaffolds; the keystone gains an explicit TR01-absence assertion. The scaffold stays intentionally lint-RED via PH01.
+- **Weld invariant** (`tests/skill/using-shakespii.test.ts`): `skills/using-shakespii/` already shipped evals in the deviant pre-schema shape (§12); it migrates to the skill-creator schema and gains a fifth corpus-audit case, keeping the weld at `{ errors: 0, warnings: 0 }`. using-shakespii is the first TR01-clean skill; the weld test re-pins the new shape.
 - **Corpus fixtures** (`tests/fixtures/corpus/*`: clean-pair, with-skipped, with-broken, clone-pair, shared-block-trio) and **config fixtures** (`tests/fixtures/config/*`): every fixture skill gains a minimal valid evals file. The corpus keystone's locked values (`{skills, skipped, errors, warnings}` and per-skill `{0,0}`) remain byte-identical. evals files live outside SKILL.md, so XS01/XS02 body-line analysis and all load-bearing line positions are untouched; `skill_name` values differ per fixture so no new cross-skill identical blocks arise in SKILL.md bodies (XS rules read only SKILL.md bodies regardless).
 - **Engine/helper-built skills** (`tests/helpers/skill.ts` synthetic skills with empty inventory): any test running the full registry and asserting totals accounts for TR01 shape 1. Rule-scoped unit tests are unaffected. The plan enumerates each touched test file explicitly.
 
@@ -198,17 +198,17 @@ Enumerated consequences:
   2. Compress a file containing only code fences — expectation: content byte-identical (nothing compressible).
   3. Idempotency: compressing an already-compressed file changes nothing material.
   Exact case wording is authored in the plan; the schema-validity and files-resolution of this fixture are what M4a asserts (`shakespii test` → deterministic pass, exit 0 — the new test-command keystone).
-- `skills/using-shakespii/evals/evals.json` — real evals for the companion skill (≥3 cases: scaffold-then-lint loop produces expected RED set; lint --json drives fix loop to clean; corpus audit surfaces XS findings on a clone corpus). Same authoring bar as compress's; graded in M4b.
+- `skills/using-shakespii/evals/evals.json` — migrated to the skill-creator shape (§12): the four existing cases keep their prompts/expectations verbatim (`skill` → `skill_name`, string ids → integers 1–4) and a fifth corpus-audit case is added (lint --corpus --json loop, XS findings read-only). Graded in M4b.
 - Validator document fixtures: valid + per-defect-class invalid `grading.json` and `benchmark.json` documents (inline in tests or under `tests/fixtures/harness/docs/`).
 
 ## §9 Testing strategy and calibration
 
 - TDD for every unit: validators, TR01, stage, run-dir, CLI formatting — fixture/unit tests written first, unpiped `bun test`, exit code preserved.
 - CLI tests spawn the real binary (existing pattern), with `SHAKESPII_CACHE_DIR` pointed at temp dirs.
-- Keystones after M4a: amended scaffold keystone (`{20, 1}`), weld `{0,0}` with authored evals, **new test-command keystone** (`shakespii test tests/fixtures/harness/compress --json` → byte-shape locked: stage statuses, summary, exit 0; and `no-evals` → exit 1 with the exact missing-evals message), corpus keystone byte-identical (per §6).
+- Keystones after M4a: scaffold keystone unchanged (`{ errors: 20, warnings: 0 }`, TR01-absence assertion added — §12), weld `{0,0}` with migrated evals, **new test-command keystone** (`shakespii test tests/fixtures/harness/compress --json` → byte-shape locked: stage statuses, summary, exit 0; and `no-evals` → exit 1 with the exact missing-evals message), corpus keystone byte-identical (per §6).
 - **Calibration sweep** (`docs/CALIBRATION-M4A.md`), M3 protocol — predictions committed before the sweep, verbatim counts, adjudication table (rule-logic bug / miscalibration / audit-miss):
   - Predicted: TR01 fires on **every** discovered skill in both corpora except `using-shakespii` (verified pre-spec: zero `evals.json` files exist anywhere in `~/.claude/skills/` or the superpowers 6.1.1 cache). The prediction doc enumerates exact expected counts per corpus root at sweep time (personal corpus discovery ≈ 14 skills incl. the using-shakespii symlink, minus dangling/skipped; superpowers = 14).
-  - Predicted: zero new **error** findings anywhere (TR01 is warn-only); weld stays `{0,0}`; scaffold `{20, 1}`.
+  - Predicted: zero new **error** findings anywhere (TR01 is warn-only); weld stays `{0,0}`; scaffold stays `{20, 0}` (§12).
   - `shakespii test ~/.claude/skills/compress` (read-only invocation) → exit 1 with the missing-evals error — recorded as the "before" evidence; the repo fixture is the "after".
 - Severity/option changes discovered during calibration are recorded, never applied silently (XS02-threshold precedent).
 
@@ -226,3 +226,11 @@ Enumerated consequences:
 Non-goals (M4a): any LLM invocation, TR02, `--fresh`, benchmark command or stats, `shakespii init` changes, writes to `~/.claude/skills/` or the plugin cache, watch mode, parallel test of multiple skills (`test` takes one skill dir; a `--corpus` test mode is future work, not designed here).
 
 Carried open decisions (user's, unchanged): XS02 threshold (options recorded in CALIBRATION-M3B), personal-skill migration — now explicitly including the live-compress `evals/` sync (adjudication #4).
+
+## §12 Plan-time amendments (2026-07-08)
+
+Plan authoring surfaced three facts the approved spec contradicted; the spec text above is amended accordingly (workflow plan-review gate, blocking finding 1). Governing rules: the repo non-negotiable "standard format only — never invent a parallel format" and the locked decision that harness schemas are byte-compatible with skill-creator's `references/schemas.md`.
+
+1. `templates/skill/evals/evals.json` already existed, in a deviant pre-schema shape (`skill` key, string ids `{{name}}-case-N`). It migrates to the skill-creator shape (`skill_name`, integer ids), preserving all nine `TODO(shakespii):` placeholder tokens. Consequences: the scaffold keystone stays `{ errors: 20, warnings: 0 }` (a migrated template validates structurally, so TR01 is silent on fresh scaffolds; an explicit TR01-absence assertion is added), and §4's former "free init → test RED loop" claim is dropped — placeholder enforcement remains lint/PH01's job.
+2. `skills/using-shakespii/evals/evals.json` already existed in the same deviant shape, pinned by the weld test. It migrates to the skill-creator shape, gains a fifth corpus-audit case, and the weld test re-pins the new shape (`skill_name`, unique integer ids, prompt anchors).
+3. `profiles/default.yaml` already declares `TR01: { severity: warn, options: { minCases: 3 } }`. No profile edit ships; the TR01 implementation consumes `options.minCases`.

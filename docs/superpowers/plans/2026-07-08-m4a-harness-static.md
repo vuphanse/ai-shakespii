@@ -26,7 +26,7 @@ Every task's requirements implicitly include this section. Copied from the spec 
 
 ## Plan-time spec amendments (discovered while reading the code)
 
-The spec was approved on three assumptions the codebase contradicts. Resolutions below follow the repo's non-negotiable #1 (standard format only — never invent a parallel format) and the locked decision `745a9a` (skill-creator schemas byte-compatible). Task 11 applies the matching text amendments to the spec itself.
+The spec was approved on three assumptions the codebase contradicts. Resolutions below follow the repo's non-negotiable #1 (standard format only — never invent a parallel format) and the locked decision `745a9a` (skill-creator schemas byte-compatible). These amendments are **already applied to the spec** — its §12 documents all three with rationale — so this plan implements the amended spec verbatim; no task edits the spec.
 
 1. **The scaffold template already ships `evals/evals.json`** (`templates/skill/evals/evals.json`) — the spec's §4/§6 assumed it didn't. Worse, its shape is deviant: a `skill` key instead of `skill_name`, string ids (`{{name}}-case-1`) instead of integers. Resolution: **migrate the template to the skill-creator shape** (Task 5). Consequences: the scaffold keystone stays `{ errors: 20, warnings: 0 }` (a migrated template validates structurally — TR01 stays silent on fresh scaffolds), and the spec's "free init→test RED loop" claim is dropped (a fresh scaffold passes the deterministic stage; placeholder enforcement remains lint/PH01's job).
 2. **`skills/using-shakespii/evals/evals.json` already exists** in the same deviant shape, and the weld test (`tests/skill/using-shakespii.test.ts`) pins `evals.skill` + string ids. Resolution: **migrate the file to the skill-creator shape, add a corpus-audit case, and update the weld test** (Task 5).
@@ -204,7 +204,16 @@ export interface BenchmarkRun {
   eval_name?: string
   configuration: 'with_skill' | 'without_skill'
   run_number: number
-  result: { pass_rate: number } & Record<string, unknown>
+  result: {
+    pass_rate: number
+    passed: number
+    failed: number
+    total: number
+    time_seconds: number
+    tokens: number
+    tool_calls?: number
+    errors: number
+  }
   expectations?: unknown[]
   notes?: string[]
 }
@@ -390,7 +399,7 @@ const benchmark = () => ({
       eval_name: 'Ocean',
       configuration: 'with_skill',
       run_number: 1,
-      result: { pass_rate: 0.85, passed: 6, failed: 1, total: 7 },
+      result: { pass_rate: 0.85, passed: 6, failed: 1, total: 7, time_seconds: 42.5, tokens: 3800, tool_calls: 18, errors: 0 },
     },
   ],
   run_summary: { with_skill: { pass_rate: { mean: 0.85 } }, without_skill: { pass_rate: { mean: 0.35 } }, delta: { pass_rate: '+0.50' } },
@@ -423,11 +432,39 @@ test('benchmark: configuration is restricted to the two viewer strings', () => {
 
 test('benchmark: per-run diagnostics carry indexed paths', () => {
   const doc = benchmark()
-  doc.runs[0] = { eval_id: 1.5, configuration: 'with_skill', run_number: 1, result: { pass_rate: 2 }, extra: true } as never
+  doc.runs[0] = {
+    eval_id: 1.5,
+    configuration: 'with_skill',
+    run_number: 1,
+    result: { pass_rate: 2, passed: 6, failed: 1, total: 7, time_seconds: 42.5, tokens: 3800, errors: 0 },
+    extra: true,
+  } as never
   expect(validateBenchmarkJson(doc)).toEqual([
     { path: 'runs[0].eval_id', message: 'must be an integer' },
     { path: 'runs[0].result.pass_rate', message: 'must be a number between 0 and 1' },
     { path: 'runs[0].extra', message: 'unknown key "extra"' },
+  ])
+})
+
+test('benchmark: required result fields are enforced, in fixed order', () => {
+  const doc = benchmark()
+  doc.runs[0].result = { pass_rate: 0.5 } as never
+  expect(validateBenchmarkJson(doc)).toEqual([
+    { path: 'runs[0].result.passed', message: 'must be an integer' },
+    { path: 'runs[0].result.failed', message: 'must be an integer' },
+    { path: 'runs[0].result.total', message: 'must be an integer' },
+    { path: 'runs[0].result.time_seconds', message: 'must be a number' },
+    { path: 'runs[0].result.tokens', message: 'must be a number' },
+    { path: 'runs[0].result.errors', message: 'must be an integer' },
+  ])
+})
+
+test('benchmark: unknown result key and mistyped tool_calls', () => {
+  const doc = benchmark()
+  doc.runs[0].result = { pass_rate: 0.5, passed: 1, failed: 0, total: 1, time_seconds: 1, tokens: 10, tool_calls: 'many', errors: 0, bonus: 1 } as never
+  expect(validateBenchmarkJson(doc)).toEqual([
+    { path: 'runs[0].result.tool_calls', message: 'must be an integer' },
+    { path: 'runs[0].result.bonus', message: 'unknown key "bonus"' },
   ])
 })
 
@@ -512,6 +549,7 @@ export function validateGradingJson(doc: unknown): SchemaDiagnostic[] {
 
 const BENCHMARK_ROOT_KEYS = ['metadata', 'runs', 'run_summary', 'notes']
 const BENCHMARK_RUN_KEYS = ['eval_id', 'eval_name', 'configuration', 'run_number', 'result', 'expectations', 'notes']
+const BENCHMARK_RESULT_KEYS = ['pass_rate', 'passed', 'failed', 'total', 'time_seconds', 'tokens', 'tool_calls', 'errors']
 
 export function validateBenchmarkJson(doc: unknown): SchemaDiagnostic[] {
   if (!isRecord(doc)) return [{ path: '$', message: 'root must be an object' }]
@@ -541,6 +579,20 @@ export function validateBenchmarkJson(doc: unknown): SchemaDiagnostic[] {
         const pr = r.result.pass_rate
         if (typeof pr !== 'number' || Number.isNaN(pr) || pr < 0 || pr > 1) {
           out.push({ path: `${at}.result.pass_rate`, message: 'must be a number between 0 and 1' })
+        }
+        for (const k of ['passed', 'failed', 'total']) {
+          if (!Number.isInteger(r.result[k])) out.push({ path: `${at}.result.${k}`, message: 'must be an integer' })
+        }
+        for (const k of ['time_seconds', 'tokens']) {
+          const v = r.result[k]
+          if (typeof v !== 'number' || Number.isNaN(v)) out.push({ path: `${at}.result.${k}`, message: 'must be a number' })
+        }
+        if (!Number.isInteger(r.result.errors)) out.push({ path: `${at}.result.errors`, message: 'must be an integer' })
+        if (r.result.tool_calls !== undefined && !Number.isInteger(r.result.tool_calls)) {
+          out.push({ path: `${at}.result.tool_calls`, message: 'must be an integer' })
+        }
+        for (const key of Object.keys(r.result)) {
+          if (!BENCHMARK_RESULT_KEYS.includes(key)) out.push({ path: `${at}.result.${key}`, message: `unknown key "${key}"` })
         }
       }
       if (r.expectations !== undefined && !Array.isArray(r.expectations)) {
@@ -1746,9 +1798,17 @@ test('pretty output carries the contractual stage and summary lines', () => {
   expect(out).toContain('deterministic: 0 errors, 1 warning · scenario/grading pending M4b')
 })
 
-test('SKILL.md path is accepted and resolved to its parent', () => {
-  const r = run(['test', join(FIXTURES, 'two-cases/SKILL.md'), '--json'])
-  expect(r.exitCode).toBe(0)
+test('a file path is rejected: the target must be a directory (spec §2)', () => {
+  const r = run(['test', join(FIXTURES, 'two-cases/SKILL.md')])
+  expect(r.exitCode).toBe(2)
+  expect(r.stderr.toString()).toContain('not a directory')
+  expect(r.stdout.toString()).toBe('')
+})
+
+test('a nonexistent path is rejected as not a directory', () => {
+  const r = run(['test', join(FIXTURES, 'does-not-exist')])
+  expect(r.exitCode).toBe(2)
+  expect(r.stderr.toString()).toContain('not a directory')
 })
 
 test('unknown option: loud failure, exit 2', () => {
@@ -1792,8 +1852,8 @@ Expected: FAIL — `unknown command: test` (exit 2) makes every case fail.
 Create `src/cli/test.ts`:
 
 ```ts
-import { existsSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { existsSync, statSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { testSkill } from '../lib/harness'
 import { parseSkill } from '../lib/parser'
 import { jsonTestReport } from './format/test-json'
@@ -1818,8 +1878,17 @@ export function runTest(argv: string[]): number {
     console.error(USAGE)
     return 2
   }
-  let dir = resolve(positionals[0])
-  if (basename(dir) === 'SKILL.md') dir = dirname(dir)
+  const dir = resolve(positionals[0])
+  let isDir = false
+  try {
+    isDir = statSync(dir).isDirectory()
+  } catch {
+    isDir = false
+  }
+  if (!isDir) {
+    console.error(`not a directory: ${dir}`)
+    return 2
+  }
   if (!existsSync(join(dir, 'SKILL.md'))) {
     console.error(`not a skill: no SKILL.md at ${dir}`)
     return 2
@@ -2126,8 +2195,10 @@ git commit -m "docs(m4a): calibration sweep — actuals and adjudications"
 
 **Files:**
 - Create: `docs/HARNESS.md`
-- Modify: `docs/LINT-RULES.md`, `docs/ROADMAP.md`, `README.md`, `docs/specs/2026-07-08-m4a-harness-static-design.md`
-- Mirrors: `~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/HARNESS.md`, `~/.ai-pref-nsync/local-docs/ai-shakespii/specs/2026-07-08-m4a-harness-static-design.md`
+- Modify: `docs/LINT-RULES.md`, `docs/ROADMAP.md`, `README.md`
+- Mirrors: `~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/HARNESS.md`
+
+(The spec amendments recorded in this plan's header were applied to the spec — its §12 — before execution began; do not edit the spec in this task.)
 
 **Interfaces:**
 - Consumes: everything shipped in Tasks 1–10.
@@ -2277,61 +2348,23 @@ Add under the lint bullet in the commands/features list:
 
 Update the status line/paragraph that currently ends at M3b to state that M4a (harness static half: `shakespii test`, TR01, evals validators, run-dir skeleton) is complete and M4b (LLM half) is next.
 
-- [ ] **Step 5: Amend the spec to match plan-time reality**
-
-Apply these three edits to `docs/specs/2026-07-08-m4a-harness-static-design.md` (they record the plan-time discoveries; rationale: repo non-negotiable #1 — standard format only — and locked decision 745a9a):
-
-Edit 1 — in §1, replace the sentence fragment
-
-> `profiles/default.yaml` severities/options for existing rules (TR01 is an addition), `shakespii init` scaffold content, the read-only dogfood corpus.
-
-with
-
-> `profiles/default.yaml` (the TR01 entry pre-existed with `minCases: 3` — no profile edit shipped), the read-only dogfood corpus. Plan-time amendment: `templates/skill/evals/evals.json` migrated from a deviant pre-schema shape (`skill` key, string ids) to the skill-creator schema; fresh scaffolds now carry schema-valid placeholder evals.
-
-Edit 2 — in §4 item 2, replace
-
-> This is the enforcement teeth and the free `init → test` RED loop: a raw scaffold fails `shakespii test` without any init changes.
-
-with
-
-> This is the enforcement teeth. (Plan-time amendment: the migrated scaffold template ships schema-valid placeholder evals, so a fresh scaffold passes the deterministic stage; placeholder enforcement remains lint/PH01's job.)
-
-Edit 3 — in §6, replace the scaffold-keystone bullet
-
-> - **Scaffold keystone** (`tests/cli/keystone.test.ts`): raw scaffold expectation amends from `{ errors: 20, warnings: 0 }` to `{ errors: 20, warnings: 1 }` — the one new warning is TR01 shape 1. The scaffold stays intentionally RED; `shakespii init` output is not modified.
-
-with
-
-> - **Scaffold keystone** (`tests/cli/keystone.test.ts`): unchanged at `{ errors: 20, warnings: 0 }` — the template's evals.json migrated to the skill-creator shape (plan-time amendment) and validates structurally, so TR01 stays silent on fresh scaffolds; the keystone gains an explicit TR01-absence assertion.
-
-and replace the weld bullet
-
-> - **Weld invariant** (`tests/skill/using-shakespii.test.ts`): `skills/using-shakespii/` gets a real, authored `evals/evals.json` (≥3 cases — see §8), keeping the weld at `{ errors: 0, warnings: 0 }`. using-shakespii becomes the first TR01-clean skill.
-
-with
-
-> - **Weld invariant** (`tests/skill/using-shakespii.test.ts`): `skills/using-shakespii/` already shipped evals in the deviant pre-schema shape; it migrates to the skill-creator schema and gains a fifth corpus-audit case, keeping the weld at `{ errors: 0, warnings: 0 }`. using-shakespii is the first TR01-clean skill.
-
-- [ ] **Step 6: Sync mirrors and verify**
+- [ ] **Step 5: Sync mirrors and verify**
 
 ```bash
 cp docs/HARNESS.md ~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/HARNESS.md
-cp docs/specs/2026-07-08-m4a-harness-static-design.md ~/.ai-pref-nsync/local-docs/ai-shakespii/specs/
 cmp docs/HARNESS.md ~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/HARNESS.md
-cmp docs/specs/2026-07-08-m4a-harness-static-design.md ~/.ai-pref-nsync/local-docs/ai-shakespii/specs/2026-07-08-m4a-harness-static-design.md
 ```
 
-Expected: both `cmp` silent.
+Expected: `cmp` silent.
 
-- [ ] **Step 7: Full suite, then commit**
+- [ ] **Step 6: Full suite, then commit**
 
 Run: `bun test`
 Expected: exit 0.
 
 ```bash
-git add docs/HARNESS.md docs/LINT-RULES.md docs/ROADMAP.md README.md docs/specs/2026-07-08-m4a-harness-static-design.md
-git commit -m "docs(m4a): HARNESS.md contract, catalog and roadmap updates, spec amendments"
+git add docs/HARNESS.md docs/LINT-RULES.md docs/ROADMAP.md README.md
+git commit -m "docs(m4a): HARNESS.md contract, catalog and roadmap updates"
 ```
 
 ---
@@ -2441,6 +2474,6 @@ git commit -m "feat(skill): using-shakespii v0.3.0 — eval test loop and TR01 r
 
 ## Plan self-review notes
 
-- **Spec coverage:** §2 CLI → Task 8; §3 validators/types → Tasks 1–2; §4 stage → Task 3; §5 TR01 → Task 6; §6 blast radius → Tasks 5, 6; §7 run-dir → Task 4; §8 fixtures → Tasks 5, 8, 9; §9 keystones/calibration → Tasks 9, 10; §10 docs/companion → Tasks 11, 12; §11 non-goals → no task touches them. Spec amendments (plan-time discoveries) → header section + Task 11 Step 5.
+- **Spec coverage:** §2 CLI → Task 8; §3 validators/types → Tasks 1–2; §4 stage → Task 3; §5 TR01 → Task 6; §6 blast radius → Tasks 5, 6; §7 run-dir → Task 4; §8 fixtures → Tasks 5, 8, 9; §9 keystones/calibration → Tasks 9, 10; §10 docs/companion → Tasks 11, 12; §11 non-goals → no task touches them. Spec amendments (plan-time discoveries) → applied directly to the spec (its §12) before execution; the plan implements the amended spec.
 - **Ordering constraint:** Task 5 MUST precede Task 6 (fixtures prepared before TR01 goes live keeps every intermediate commit green). Task 3 must precede Task 6 (TR01 delegates to `runDeterministic`). Tasks 7–8 need Task 3; Task 9 needs Task 8; Tasks 10–12 need everything before them.
 - **Type consistency:** `HarnessFinding`/`StageReport`/`TestResult` defined once (Task 3), imported by Tasks 7–8; `SchemaDiagnostic`/`isRecord` defined once (Task 1), imported by Tasks 2–3; `runDeterministic` (Task 3) consumed by Task 6; CLI export `runTest` (Task 8) mirrors `runLint`/`runInit` naming.

@@ -1,7 +1,7 @@
 ---
 name: using-shakespii
 description: "Use when creating a new agent skill or auditing, linting, or fixing an existing one — drives the shakespii CLI (init, lint --json) to scaffold standard SKILL.md skills and resolve findings until clean."
-version: 0.1.0
+version: 0.2.0
 ---
 
 # using-shakespii
@@ -14,8 +14,8 @@ contract instead of by taste. The CLI decides; this skill teaches the loop aroun
 
 ## Inputs
 
-- Audit: the path to an existing skill directory (one containing `SKILL.md`). Multiple
-  skills are audited one directory at a time.
+- Audit: the path to an existing skill directory (one containing `SKILL.md`), or a
+  corpus root — a directory of skill directories — audited in one run with `--corpus`.
 - Authoring: the new skill's kebab-case name, its purpose, and the situations that
   should trigger it — all three confirmed with the human before scaffolding.
 - Optional: a specific finding or rule ID the human wants addressed first.
@@ -46,7 +46,10 @@ Shared core, both branches:
 
 Audit branch — fix an existing skill:
 
-5. Lint the directory the human named and work the fix loop above.
+5. Lint the directory the human named and work the fix loop above. For a corpus
+   root, run `shakespii lint <root> --corpus --json`: work each skill's findings
+   with the same loop, and treat `corpusFindings` (XS rules, whose `sites` name
+   every involved skill) as refactor suggestions spanning skills.
 6. Preserve the skill's voice and intent: reword a description to lead with its
    trigger; do not rewrite what the skill is for.
 7. Report before/after finding counts, what changed per rule, and any warnings left
@@ -96,8 +99,8 @@ remaining warnings.
 - Editing skill files by taste without running lint first — the CLI is the arbiter.
 - Weakening content to appease a rule: deleting a section to silence a finding, or
   gutting a description. Fix the defect, keep the substance.
-- Referencing CLI features that do not exist yet. There is no corpus-wide lint mode;
-  audit multiple skills one directory at a time.
+- Pointing `--corpus` at a single skill directory — corpus mode takes the *parent*
+  directory; lint a single skill without the flag.
 - Installing a freshly authored skill without human approval, or with findings open.
 - Looping on a run that exited `2` — that exit means lint itself could not run;
   report it instead of retrying.

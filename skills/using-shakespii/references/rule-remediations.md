@@ -1,7 +1,7 @@
-# Rule remediations — seed rules
+# Rule remediations — rule catalog
 
 Tracks `profiles/default.yaml` (profile `default`, M2 vintage; provenance superpowers
-6.1.1). Last reviewed: 2026-07-07. When the rule catalog grows, append entries here — a
+6.1.1). Last reviewed: 2026-07-08. When the rule catalog grows, append entries here — a
 finding with no entry is fixed from its own `message`.
 
 Every entry: what the rule demands, why it usually fires, the minimal fix, and a
@@ -71,3 +71,23 @@ before → after sketch.
   not a fix — that trades a placeholder finding for a missing-section finding.
 - Before → after: a section whose only body is the scaffold placeholder line → that
   section written out with real content.
+
+## XS01 — duplicate block across skills (corpus mode)
+
+- Contract: no block of 15+ identical non-blank lines appears in two or more skills'
+  `SKILL.md` bodies; the finding lists every sharing skill in `sites`.
+- Common cause: copy-pasting a shared preamble or checklist between sibling skills.
+- Fix: extract the block to one shared reference file and link it from each skill,
+  keeping skill-specific deviations inline.
+- Before → after: the same seventy-line readiness checklist in five skills → one
+  `references/readiness.md` linked five times.
+
+## XS02 — near-clone skills (corpus mode)
+
+- Contract: no cluster of skills whose `SKILL.md` bodies are near-identical
+  (line-set similarity at or above the profile threshold).
+- Common cause: forking a skill as a template and editing only a few lines.
+- Fix: parameterize the shared behavior into one skill whose inputs select the
+  variant, or reduce the clones to thin wrappers around one shared reference.
+- Before → after: five kickoff clones sharing most of their bodies → one
+  parameterized kickoff skill.

@@ -1,15 +1,27 @@
 #!/usr/bin/env bun
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
-// Calibration goes through the real CLI's lint --json path (spec §5) — the
-// protocol exercises the CLI/JSON contract itself, not lib internals.
+// Calibration drives the CLI's corpus mode (M3b spec §8) — one invocation per
+// root. The corpus CLI/JSON contract itself is what the sweep exercises, and
+// this script is its first dogfood consumer (it replaces the M2-era
+// hand-rolled per-directory walk).
 const CLI = join(import.meta.dir, '../src/cli/index.ts')
 
 interface ReportFinding {
   ruleId: string
   severity: 'error' | 'warn'
+}
+interface SkillEntry {
+  skill: { dir: string }
+  findings?: ReportFinding[]
+  runError?: string
+}
+interface CorpusReport {
+  skills: SkillEntry[]
+  corpusFindings: Array<{ ruleId: string; severity: string; message: string; sites: Array<{ skill: string }> }>
+  skipped: Array<{ dir: string; reason: string }>
 }
 
 const roots = process.argv.length > 2
@@ -24,23 +36,25 @@ for (const root of roots) {
     console.error(`skip missing corpus root: ${root}`)
     continue
   }
+  const r = Bun.spawnSync(['bun', CLI, 'lint', root, '--corpus', '--json'])
+  if (r.stdout.length === 0) {
+    console.error(`corpus lint produced no report for ${root}: ${r.stderr.toString().trim()}`)
+    continue
+  }
+  const report = JSON.parse(r.stdout.toString()) as CorpusReport
   const perRule = new Map<string, { errors: number; warns: number; skills: Set<string> }>()
   let total = 0
-  for (const name of readdirSync(root).sort()) {
-    const dir = join(root, name)
-    if (!existsSync(join(dir, 'SKILL.md'))) continue
-    const r = Bun.spawnSync(['bun', CLI, 'lint', dir, '--json'])
-    if (r.exitCode === 2) {
-      console.error(`lint failed (exit 2) on ${dir}: ${r.stderr.toString().trim()}`)
+  for (const s of report.skills) {
+    if (s.runError !== undefined) {
+      console.error(`lint failed on ${s.skill.dir}: ${s.runError}`)
       continue
     }
     total++
-    const report = JSON.parse(r.stdout.toString()) as { findings: ReportFinding[] }
-    for (const f of report.findings) {
+    for (const f of s.findings ?? []) {
       const e = perRule.get(f.ruleId) ?? { errors: 0, warns: 0, skills: new Set<string>() }
       if (f.severity === 'error') e.errors++
       else e.warns++
-      e.skills.add(name)
+      e.skills.add(basename(s.skill.dir))
       perRule.set(f.ruleId, e)
     }
   }
@@ -51,4 +65,11 @@ for (const root of roots) {
     const e = perRule.get(id)!
     console.log(`| ${id} | ${e.errors} | ${e.warns} | ${e.skills.size} |`)
   }
+  if (report.corpusFindings.length > 0) {
+    console.log('\n### Corpus findings\n')
+    for (const f of report.corpusFindings) {
+      console.log(`- ${f.ruleId} (${f.severity}): ${f.message} — sites: ${f.sites.map(s => s.skill).join(', ')}`)
+    }
+  }
+  for (const sk of report.skipped) console.error(`skipped ${sk.dir} — ${sk.reason}`)
 }

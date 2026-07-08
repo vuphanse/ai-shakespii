@@ -78,3 +78,27 @@ export interface Profile {
   anatomy: AnatomyTable
   rules: Record<string, RuleSetting>
 }
+
+export interface CorpusSite {
+  skill: string
+  file: 'SKILL.md'
+  startLine: number
+  endLine: number
+}
+
+export interface CorpusRuleFinding {
+  message: string
+  sites: CorpusSite[]
+}
+
+export interface CorpusFinding {
+  ruleId: string
+  severity: Severity
+  message: string
+  sites: CorpusSite[]
+}
+
+export interface CorpusRule {
+  id: string
+  check(skills: ParsedSkill[], ctx: RuleContext): CorpusRuleFinding[]
+}

@@ -48,3 +48,8 @@ export function cleanSkillRaw(overrides: Partial<Record<string, string>> = {}): 
     '',
   ].join('\n')
 }
+
+/** Build a ParsedSkill[] corpus from raw SKILL.md texts without touching disk. */
+export function corpusFromRaws(raws: string[], dirNames?: string[]): ParsedSkill[] {
+  return raws.map((raw, i) => skillFromRaw(raw, [], dirNames?.[i] ?? `corpus-skill-${i + 1}`))
+}

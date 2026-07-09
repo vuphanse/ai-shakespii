@@ -12,16 +12,16 @@ const corpusJson = (root: string) => {
 test('KEYSTONE clean-pair: 2 skills, all zero, no corpus findings, exit 0', () => {
   const { exitCode, rep } = corpusJson('clean-pair')
   expect(exitCode).toBe(0)
-  expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 0, warnings: 0 })
+  expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 0, warnings: 2 })
   expect(rep.corpusFindings).toEqual([])
-  for (const s of rep.skills) expect(s.summary).toEqual({ errors: 0, warnings: 0 })
+  for (const s of rep.skills) expect(s.summary).toEqual({ errors: 0, warnings: 1 })
 })
 
 test('KEYSTONE clone-pair: XS01 17-line block + XS02 cluster of 2, exit 0', () => {
   const { exitCode, rep } = corpusJson('clone-pair')
   expect(exitCode).toBe(0)
-  expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 0, warnings: 2 })
-  for (const s of rep.skills) expect(s.summary).toEqual({ errors: 0, warnings: 0 })
+  expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 0, warnings: 4 })
+  for (const s of rep.skills) expect(s.summary).toEqual({ errors: 0, warnings: 1 })
   expect(rep.corpusFindings).toEqual([
     {
       ruleId: 'XS01',
@@ -47,8 +47,8 @@ test('KEYSTONE clone-pair: XS01 17-line block + XS02 cluster of 2, exit 0', () =
 test('KEYSTONE shared-block-trio: one XS01 finding, three sites, XS02 silent, exit 0', () => {
   const { exitCode, rep } = corpusJson('shared-block-trio')
   expect(exitCode).toBe(0)
-  expect(rep.summary).toEqual({ skills: 3, skipped: 0, errors: 0, warnings: 1 })
-  for (const s of rep.skills) expect(s.summary).toEqual({ errors: 0, warnings: 0 })
+  expect(rep.summary).toEqual({ skills: 3, skipped: 0, errors: 0, warnings: 4 })
+  for (const s of rep.skills) expect(s.summary).toEqual({ errors: 0, warnings: 1 })
   expect(rep.corpusFindings).toEqual([
     {
       ruleId: 'XS01',

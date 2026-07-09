@@ -73,6 +73,6 @@ rules:
   XS02: { severity: warn, options: { similarity: 0.65 } }  # calibrated 2026-07-09 vs kickoff-clone evidence (CALIBRATION-M3B adjudication)
   # TR — trigger & eval (harness-backed)
   TR01: { severity: warn, options: { minCases: 3 } }
-  TR02: { severity: warn, options: { minQueries: 16, requireNearMissNegatives: true } }
+  TR02: { severity: warn, options: { minQueries: 16 } }
   # PH — placeholders
   PH01: { severity: error, options: { token: "TODO(shakespii):" } }

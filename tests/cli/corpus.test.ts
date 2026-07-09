@@ -23,7 +23,7 @@ test('skipped directories are reported in JSON; stray files are not', () => {
   expect(rep.skipped).toHaveLength(1)
   expect(rep.skipped[0].reason).toBe('no SKILL.md')
   expect(rep.skipped[0].dir.endsWith('notes')).toBe(true)
-  expect(rep.summary).toEqual({ skills: 1, skipped: 1, errors: 0, warnings: 0 })
+  expect(rep.summary).toEqual({ skills: 1, skipped: 1, errors: 0, warnings: 1 })
 })
 
 test('a broken skill still prints the full report but exits 2', () => {
@@ -40,7 +40,7 @@ test('pretty corpus output names partners and prints the summary line', () => {
   expect(r.exitCode).toBe(0) // XS findings are warn — they never flip the exit code
   const out = r.stdout.toString()
   expect(out).toContain('[with: corpus-clone-b]')
-  expect(out).toContain('2 skills linted, 0 skipped · 0 errors, 2 warnings (of which 2 corpus-level)')
+  expect(out).toContain('2 skills linted, 0 skipped · 0 errors, 4 warnings (of which 2 corpus-level)')
 })
 
 test('single-skill JSON v1 is byte-stable without the new flags', () => {

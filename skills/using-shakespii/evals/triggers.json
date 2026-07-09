@@ -1,0 +1,25 @@
+{
+  "skill_name": "using-shakespii",
+  "queries": [
+    { "query": "Lint the skill I just wrote and fix the findings", "should_trigger": true },
+    { "query": "Run shakespii lint on ./skills/pdf-tools and explain the findings", "should_trigger": true },
+    { "query": "Create a new skill called changelog-writer", "should_trigger": true },
+    { "query": "Scaffold a skill for summarizing meeting notes and make it pass lint", "should_trigger": true },
+    { "query": "Audit all my installed skills for duplication", "should_trigger": true },
+    { "query": "Run the evals for my compress skill and tell me what failed", "should_trigger": true },
+    { "query": "Check whether my skill's description will actually make Claude trigger it", "should_trigger": true },
+    { "query": "Benchmark my skill with and without the skill mounted", "should_trigger": true },
+    { "query": "Validate the frontmatter of SKILL.md in ./skills/note-taker", "should_trigger": true },
+    { "query": "My skill directory fails shakespii test — help me fix the eval suite", "should_trigger": true },
+    { "query": "Add eval cases to my skill so it meets the minimum of three", "should_trigger": true },
+    { "query": "Which lint rules is my SKILL.md violating and how do I fix CT03?", "should_trigger": true },
+    { "query": "Run eslint on my TypeScript project", "should_trigger": false },
+    { "query": "Fix the ESLint errors in src/cli", "should_trigger": false },
+    { "query": "Write unit tests for my parser module", "should_trigger": false },
+    { "query": "Review this pull request for code quality issues", "should_trigger": false },
+    { "query": "Benchmark my API server's request latency", "should_trigger": false },
+    { "query": "Lint this Markdown README for broken links", "should_trigger": false },
+    { "query": "Improve my prompt for the customer-support chatbot", "should_trigger": false },
+    { "query": "Audit my npm dependencies for vulnerabilities", "should_trigger": false }
+  ]
+}

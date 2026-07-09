@@ -10,7 +10,7 @@ const run = (args: string[]) => Bun.spawnSync(['bun', CLI, ...args], { cwd: tmpd
 test('minimal-pass: exit 0, pretty success line', () => {
   const r = run(['lint', join(FIXTURES, 'minimal-pass')])
   expect(r.exitCode).toBe(0)
-  expect(r.stdout.toString()).toContain('✔ 0 problems')
+  expect(r.stdout.toString()).toContain('✖ 1 problems (0 errors, 1 warnings)') // minimal-pass has no evals/triggers.json — TR02 warns
 })
 
 test('SKILL.md path accepted and resolved to its parent', () => {
@@ -43,12 +43,12 @@ test('warning-only findings: exit 0 in both modes, warning still reported', () =
   const j = run(['lint', join(FIXTURES, 'warn-only'), '--json'])
   expect(j.exitCode).toBe(0)
   const report = JSON.parse(j.stdout.toString())
-  expect(report.summary).toEqual({ errors: 0, warnings: 1 })
+  expect(report.summary).toEqual({ errors: 0, warnings: 2 })
   expect(report.findings[0].ruleId).toBe('FM01')
   expect(report.findings[0].severity).toBe('warn')
   const p = run(['lint', join(FIXTURES, 'warn-only')])
   expect(p.exitCode).toBe(0)
-  expect(p.stdout.toString()).toContain('(0 errors, 1 warnings)')
+  expect(p.stdout.toString()).toContain('(0 errors, 2 warnings)')
 })
 
 test('not a skill: exit 2, message on stderr', () => {

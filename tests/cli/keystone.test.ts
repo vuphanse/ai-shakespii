@@ -14,14 +14,15 @@ test('fresh init output produces exactly the M1 RED set and byte-matches the tem
   expect(lint.exitCode).toBe(1)
   const report = JSON.parse(lint.stdout.toString())
 
-  expect(report.summary).toEqual({ errors: 20, warnings: 0 })
+  expect(report.summary).toEqual({ errors: 20, warnings: 1 })
   const byRule = new Map<string, number>()
   for (const f of report.findings) byRule.set(f.ruleId, (byRule.get(f.ruleId) ?? 0) + 1)
   expect(byRule.get('PH01')).toBe(18)
   expect(byRule.get('FM04')).toBe(1)
   expect(byRule.get('CT03')).toBe(1)
   expect(byRule.has('TR01')).toBe(false) // migrated template evals validate; TR01 stays silent on fresh scaffolds
-  expect(report.findings.length).toBe(20) // no other findings
+  expect(byRule.get('TR02')).toBe(1) // no triggers.json in the fresh scaffold
+  expect(report.findings.length).toBe(21) // no other findings
 
   const ph01ByFile = new Map<string, number>()
   for (const f of report.findings) {

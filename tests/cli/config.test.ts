@@ -14,7 +14,7 @@ test('baseline: no-version-skill has exactly one FM05 error', () => {
   const r = lint(join(FIX, 'no-version-skill'), '--json')
   expect(r.exitCode).toBe(1)
   const rep = JSON.parse(r.stdout)
-  expect(rep.summary).toEqual({ errors: 1, warnings: 0 })
+  expect(rep.summary).toEqual({ errors: 1, warnings: 1 })
   expect(rep.findings[0].ruleId).toBe('FM05')
 })
 
@@ -22,7 +22,7 @@ test('--config demotes FM05 to warn and flips the exit code', () => {
   const r = lint(join(FIX, 'no-version-skill'), '--json', '--config', join(FIX, 'demote-fm05.yaml'))
   expect(r.exitCode).toBe(0)
   const rep = JSON.parse(r.stdout)
-  expect(rep.summary).toEqual({ errors: 0, warnings: 1 })
+  expect(rep.summary).toEqual({ errors: 0, warnings: 2 })
   expect(rep.findings[0]).toMatchObject({ ruleId: 'FM05', severity: 'warn' })
 })
 
@@ -30,25 +30,33 @@ test('--config off removes the rule entirely', () => {
   const r = lint(join(FIX, 'no-version-skill'), '--json', '--config', join(FIX, 'off-fm05.yaml'))
   expect(r.exitCode).toBe(0)
   const rep = JSON.parse(r.stdout)
-  expect(rep.summary).toEqual({ errors: 0, warnings: 0 })
-  expect(rep.findings).toEqual([])
+  expect(rep.summary).toEqual({ errors: 0, warnings: 1 })
+  expect(rep.findings).toEqual([
+    {
+      ruleId: 'TR02',
+      severity: 'warn',
+      file: 'SKILL.md',
+      line: null,
+      message: 'no evals/triggers.json — add a trigger-accuracy query set (16+ labeled queries incl. negatives)',
+    },
+  ])
 })
 
 test('--config option override merges over default options', () => {
   const r = lint(join(import.meta.dir, '../fixtures/minimal-pass'), '--json', '--config', join(FIX, 'fm03-options.yaml'))
   expect(r.exitCode).toBe(0)
   const rep = JSON.parse(r.stdout)
-  expect(rep.summary).toEqual({ errors: 0, warnings: 1 })
+  expect(rep.summary).toEqual({ errors: 0, warnings: 2 })
   expect(rep.findings[0].ruleId).toBe('FM03')
 })
 
 test('--config alias replacement silences CT06 on mission-skill', () => {
   const before = lint(join(FIX, 'mission-skill'), '--json')
-  expect(JSON.parse(before.stdout).summary).toEqual({ errors: 0, warnings: 1 })
+  expect(JSON.parse(before.stdout).summary).toEqual({ errors: 0, warnings: 2 })
   expect(JSON.parse(before.stdout).findings[0].ruleId).toBe('CT06')
   const after = lint(join(FIX, 'mission-skill'), '--json', '--config', join(FIX, 'intent-alias.yaml'))
   expect(after.exitCode).toBe(0)
-  expect(JSON.parse(after.stdout).summary).toEqual({ errors: 0, warnings: 0 })
+  expect(JSON.parse(after.stdout).summary).toEqual({ errors: 0, warnings: 1 })
 })
 
 test('--config applies in corpus mode too', () => {
@@ -57,7 +65,7 @@ test('--config applies in corpus mode too', () => {
   const rep = JSON.parse(r.stdout)
   expect(rep.corpusFindings).toHaveLength(1)
   expect(rep.corpusFindings[0].ruleId).toBe('XS02')
-  expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 0, warnings: 1 })
+  expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 0, warnings: 3 })
 })
 
 test('corpus mode exits 1 and tallies errors when a corpus finding is promoted to error', () => {
@@ -69,9 +77,9 @@ test('corpus mode exits 1 and tallies errors when a corpus finding is promoted t
   const xs02 = rep.corpusFindings.find((f: { ruleId: string }) => f.ruleId === 'XS02')
   expect(xs01.severity).toBe('error')
   expect(xs02.severity).toBe('warn')
-  expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 1, warnings: 1 })
+  expect(rep.summary).toEqual({ skills: 2, skipped: 0, errors: 1, warnings: 3 })
   for (const s of rep.skills) {
-    expect(s.summary).toEqual({ errors: 0, warnings: 0 })
+    expect(s.summary).toEqual({ errors: 0, warnings: 1 })
   }
 })
 

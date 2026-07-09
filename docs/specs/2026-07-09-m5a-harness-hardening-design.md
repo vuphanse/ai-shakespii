@@ -84,9 +84,14 @@ The existing safety posture is unchanged and restated: never point `--run` /
 
 Three assertions, each a live `claude -p` probe run before any implementation task:
 
-- (a) **Global exclusion:** a probe query that reliably invokes the user-global
-  `compress` skill in an unflagged session produces **zero** Skill tool_use events
-  under `--setting-sources project,local`.
+- (a) **Global exclusion, with paired positive control:** two runs of the SAME
+  probe prompt in the same spike session, in order: (a1) an **unflagged**
+  positive-control run that must observe at least one Skill tool_use event with
+  `input.skill === "compress"` — proving the probe still triggers the user-global
+  skill today; then (a2) the run under `--setting-sources project,local`, which
+  must produce **zero** such events. Assertion (a) passes only if BOTH hold; a
+  probe that fails (a1) is replaced and the pair re-run, never waived — without
+  the positive control the exclusion proof would be vacuous.
 - (b) **Staged skill loads:** a workspace with a project-level
   `.claude/skills/<name>/SKILL.md` still triggers that skill under the flag.
 - (c) **Auth intact:** the flagged session completes normally on the machine's

@@ -96,23 +96,338 @@ Sweep required three passes (fail-fast + resume-from-cache working as designed):
 - Pass 2: exit 1 — `bench run failed (eval 2, with_skill, run 1): grader returned invalid grading (reply is not valid JSON)`
 - Pass 3: exit 0 — complete 18/18 matrix; `benchmark.json` written and validator-clean.
 
-`run_summary` verbatim:
+Full `benchmark.json` verbatim (the document at
+`<cacheRoot>/runs/compress/bench-<suiteKey>/benchmark.json`, byte-identical
+to the `--json` stdout):
 
 ```json
 {
- "with_skill": {
-  "pass_rate": { "mean": 0.8889, "stddev": 0.3333, "min": 0, "max": 1 },
-  "time_seconds": { "mean": 118.05, "stddev": 49.45, "min": 66.65, "max": 205.43 },
-  "tokens": { "mean": 4060.44, "stddev": 1729.25, "min": 1623, "max": 6553 }
- },
- "without_skill": {
-  "pass_rate": { "mean": 1, "stddev": 0, "min": 1, "max": 1 },
-  "time_seconds": { "mean": 111.73, "stddev": 57.85, "min": 57.84, "max": 201.05 },
-  "tokens": { "mean": 2858.33, "stddev": 2233.19, "min": 975, "max": 8095 }
- },
- "delta": { "pass_rate": "-0.11", "time_seconds": "+6.3", "tokens": "+1202" }
+  "metadata": {
+    "skill_name": "compress",
+    "model": "sonnet",
+    "runs_per_configuration": 3,
+    "harness_schema_version": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 159.85,
+        "tokens": 6239,
+        "tool_calls": 16,
+        "errors": 2
+      }
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 2,
+      "result": {
+        "pass_rate": 1,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 66.65,
+        "tokens": 1867,
+        "tool_calls": 5,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 3,
+      "result": {
+        "pass_rate": 1,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 138.34,
+        "tokens": 4507,
+        "tool_calls": 16,
+        "errors": 1
+      }
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 76.43,
+        "tokens": 1062,
+        "tool_calls": 5,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 2,
+      "result": {
+        "pass_rate": 1,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 64.06,
+        "tokens": 975,
+        "tool_calls": 3,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 3,
+      "result": {
+        "pass_rate": 1,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 85.69,
+        "tokens": 1077,
+        "tool_calls": 4,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 68.16,
+        "tokens": 4116,
+        "tool_calls": 12,
+        "errors": 1
+      }
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 2,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 93.67,
+        "tokens": 4933,
+        "tool_calls": 17,
+        "errors": 1
+      }
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 3,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 67.27,
+        "tokens": 3002,
+        "tool_calls": 7,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 68.31,
+        "tokens": 2551,
+        "tool_calls": 8,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 2,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 96.57,
+        "tokens": 3662,
+        "tool_calls": 8,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 3,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 57.84,
+        "tokens": 2050,
+        "tool_calls": 8,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 108.12,
+        "tokens": 3704,
+        "tool_calls": 11,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 2,
+      "result": {
+        "pass_rate": 0,
+        "passed": 0,
+        "failed": 2,
+        "total": 2,
+        "time_seconds": 154.96,
+        "tokens": 1623,
+        "tool_calls": 8,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 3,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 205.43,
+        "tokens": 6553,
+        "tool_calls": 18,
+        "errors": 1
+      }
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 157.25,
+        "tokens": 2423,
+        "tool_calls": 10,
+        "errors": 0
+      }
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 2,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 201.05,
+        "tokens": 3830,
+        "tool_calls": 15,
+        "errors": 2
+      }
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 3,
+      "result": {
+        "pass_rate": 1,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 198.39,
+        "tokens": 8095,
+        "tool_calls": 11,
+        "errors": 0
+      }
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.8889,
+        "stddev": 0.3333,
+        "min": 0,
+        "max": 1
+      },
+      "time_seconds": {
+        "mean": 118.05,
+        "stddev": 49.45,
+        "min": 66.65,
+        "max": 205.43
+      },
+      "tokens": {
+        "mean": 4060.44,
+        "stddev": 1729.25,
+        "min": 1623,
+        "max": 6553
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 1,
+        "stddev": 0,
+        "min": 1,
+        "max": 1
+      },
+      "time_seconds": {
+        "mean": 111.73,
+        "stddev": 57.85,
+        "min": 57.84,
+        "max": 201.05
+      },
+      "tokens": {
+        "mean": 2858.33,
+        "stddev": 2233.19,
+        "min": 975,
+        "max": 8095
+      }
+    },
+    "delta": {
+      "pass_rate": "-0.11",
+      "time_seconds": "+6.3",
+      "tokens": "+1202"
+    }
+  }
 }
-```
 
 Pretty (cached re-run):
 
@@ -140,6 +455,183 @@ and stayed uncached. In the recorded sweep eval 5 then completed `ok` cold
 Trigger stage verbatim: `status: pass`, `queries: {passed: 20, total: 20}`,
 `findings: []` — **accuracy 1.00**, 60/60 reps completed, zero run failures,
 zero rep retries.
+
+Trigger stage object verbatim (from the recorded sweep report):
+
+```json
+{
+  "stage": "trigger",
+  "status": "pass",
+  "findings": [],
+  "queries": {
+    "passed": 20,
+    "total": 20
+  },
+  "runs": [
+    {
+      "queryIndex": 0,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 1,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 2,
+      "shouldTrigger": true,
+      "triggered": 2,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 3,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 4,
+      "shouldTrigger": true,
+      "triggered": 2,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 5,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 6,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 7,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 8,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 9,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 10,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 11,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 12,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 13,
+      "shouldTrigger": false,
+      "triggered": 1,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 14,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 15,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 16,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 17,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 18,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 19,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    }
+  ]
+}
+```
+
 
 | # | Label | Fired | Verdict | Predicted |
 |---|---|---|---|---|

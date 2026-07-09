@@ -18,7 +18,18 @@ export function createDetector(skillName: string): Detector {
   let fired = false
 
   const matches = (tool: 'Skill' | 'Read', inputText: string): boolean => {
-    if (tool === 'Skill') return inputText.includes(skillName)
+    if (tool === 'Skill') {
+      // Exact-match on the parsed skill name (spec §7) — "compress" must not
+      // fire on "compress-v2". The input is complete JSON at block stop.
+      try {
+        const input = JSON.parse(inputText) as Record<string, unknown>
+        return typeof input.skill === 'string' && input.skill === skillName
+      } catch {
+        // defensive fallback for an unparsable accumulation: key+value needle
+        // with the closing quote, so a longer name never matches
+        return inputText.includes(`"skill":"${skillName}"`)
+      }
+    }
     // Read fires only on a path ENDING in the mounted SKILL.md (spec §6 —
     // ".../SKILL.md.bak" or a longer nested path must NOT count). The input is
     // complete JSON at block stop; parse it and test file_path with endsWith.

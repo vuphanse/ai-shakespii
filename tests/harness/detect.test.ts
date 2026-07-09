@@ -15,7 +15,7 @@ const messageStop = { type: 'stream_event', event: { type: 'message_stop' } }
 test('Skill tool_use naming the skill fires at content_block_stop, split across deltas', () => {
   const d = createDetector('demo-skill')
   expect(d.feed(start('Skill'))).toBe(false)
-  expect(d.feed(delta('{"command": "demo-sk'))).toBe(false)
+  expect(d.feed(delta('{"skill": "demo-sk'))).toBe(false)
   expect(d.feed(delta('ill"}'))).toBe(false)
   expect(d.feed(stop)).toBe(true)
 })
@@ -59,14 +59,14 @@ test('unrelated tool_use yields no verdict and scanning continues (deviation fro
   expect(d.feed(start('Bash'))).toBe(false)
   expect(d.feed(stop)).toBe(false)
   d.feed(start('Skill'))
-  d.feed(delta('{"command": "demo-skill"}'))
+  d.feed(delta('{"skill": "demo-skill"}'))
   expect(d.feed(stop)).toBe(true)
 })
 
 test('message_stop settles a pending block', () => {
   const d = createDetector('demo-skill')
   d.feed(start('Skill'))
-  d.feed(delta('{"command": "demo-skill"}'))
+  d.feed(delta('{"skill": "demo-skill"}'))
   expect(d.feed(messageStop)).toBe(true)
 })
 
@@ -74,7 +74,7 @@ test('fallback: complete assistant message with a matching tool_use fires', () =
   const d = createDetector('demo-skill')
   const ev = {
     type: 'assistant',
-    message: { content: [{ type: 'tool_use', name: 'Skill', input: { command: 'demo-skill' } }] },
+    message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'demo-skill' } }] },
   }
   expect(d.feed(ev)).toBe(true)
 })
@@ -82,7 +82,43 @@ test('fallback: complete assistant message with a matching tool_use fires', () =
 test('once fired, feed stays true', () => {
   const d = createDetector('demo-skill')
   d.feed(start('Skill'))
-  d.feed(delta('"demo-skill"'))
+  d.feed(delta('{"skill": "demo-skill"}'))
   expect(d.feed(stop)).toBe(true)
   expect(d.feed({ type: 'result', result: 'x' })).toBe(true)
+})
+
+test('Skill exact match: compress does not fire on compress-v2', () => {
+  const d = createDetector('compress')
+  d.feed(start('Skill'))
+  d.feed(delta('{"skill":"compress-v2"}'))
+  expect(d.feed(stop)).toBe(false)
+})
+
+test('Skill exact match: fires on the exact name (parse path)', () => {
+  const d = createDetector('compress')
+  d.feed(start('Skill'))
+  d.feed(delta('{"skill":"compress"}'))
+  expect(d.feed(stop)).toBe(true)
+})
+
+test('Skill fallback: unparsable accumulation fires only on the key+value needle', () => {
+  const fires = createDetector('compress')
+  fires.feed(start('Skill'))
+  fires.feed(delta('{"skill":"compress",')) // truncated JSON — unparsable
+  expect(fires.feed(stop)).toBe(true)
+
+  const noFire = createDetector('compress')
+  noFire.feed(start('Skill'))
+  noFire.feed(delta('{"skill":"compress-v2",')) // unparsable AND wrong skill
+  expect(noFire.feed(stop)).toBe(false)
+})
+
+test('Skill exact match applies on the assistant-event path too', () => {
+  const d = createDetector('compress')
+  const assistant = (skill: string) => ({
+    type: 'assistant',
+    message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill } }] },
+  })
+  expect(d.feed(assistant('compress-v2'))).toBe(false)
+  expect(d.feed(assistant('compress'))).toBe(true)
 })

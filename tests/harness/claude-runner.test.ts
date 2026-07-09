@@ -87,7 +87,7 @@ test('unspawnable binary throws ClaudeUnavailableError with the contractual mess
 
 const DETECT_LINES = [
   '{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"tu1","name":"Skill"}}}',
-  '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\\"command\\": \\"demo-skill\\"}"}}}',
+  '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\\"skill\\": \\"demo-skill\\"}"}}}',
   '{"type":"stream_event","event":{"type":"content_block_stop","index":0}}',
 ].join('\n')
 

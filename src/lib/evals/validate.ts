@@ -238,3 +238,32 @@ export function validateBenchmarkJson(doc: unknown): SchemaDiagnostic[] {
   }
   return out
 }
+
+const TRIGGERS_ROOT_KEYS = ['skill_name', 'queries']
+const TRIGGER_QUERY_KEYS = ['query', 'should_trigger']
+
+export function validateTriggersJson(doc: unknown): SchemaDiagnostic[] {
+  if (!isRecord(doc)) return [{ path: '$', message: 'root must be an object' }]
+  const out: SchemaDiagnostic[] = []
+  if (!isNonEmptyString(doc.skill_name)) out.push({ path: 'skill_name', message: 'must be a non-empty string' })
+  for (const key of Object.keys(doc)) {
+    if (!TRIGGERS_ROOT_KEYS.includes(key)) out.push({ path: key, message: `unknown key "${key}"` })
+  }
+  if (!Array.isArray(doc.queries) || doc.queries.length === 0) {
+    out.push({ path: 'queries', message: 'must be a non-empty array' })
+    return out
+  }
+  doc.queries.forEach((q: unknown, i: number) => {
+    const at = `queries[${i}]`
+    if (!isRecord(q)) {
+      out.push({ path: at, message: 'must be an object' })
+      return
+    }
+    if (!isNonEmptyString(q.query)) out.push({ path: `${at}.query`, message: 'must be a non-empty string' })
+    if (typeof q.should_trigger !== 'boolean') out.push({ path: `${at}.should_trigger`, message: 'must be a boolean' })
+    for (const key of Object.keys(q)) {
+      if (!TRIGGER_QUERY_KEYS.includes(key)) out.push({ path: `${at}.${key}`, message: `unknown key "${key}"` })
+    }
+  })
+  return out
+}

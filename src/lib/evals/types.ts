@@ -71,3 +71,13 @@ export interface BenchmarkJson {
   }
   notes?: string[]
 }
+
+export interface TriggerQuery {
+  query: string
+  should_trigger: boolean
+}
+
+export interface TriggersJson {
+  skill_name: string
+  queries: TriggerQuery[]
+}

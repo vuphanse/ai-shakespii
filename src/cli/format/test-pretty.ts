@@ -4,12 +4,8 @@ import type { HarnessFinding, StageReport, TestResult } from '../../lib/harness/
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 
-const findingLines = (findings: HarnessFinding[], lines: string[]): void => {
-  for (const f of findings) {
-    const sev = f.severity === 'error' ? pc.red('error') : pc.yellow('warn ')
-    lines.push(`    ${sev}  ${f.file}  ${f.message}`)
-  }
-}
+export const harnessFindingLines = (findings: HarnessFinding[]): string[] =>
+  findings.map(f => `    ${f.severity === 'error' ? pc.red('error') : pc.yellow('warn ')}  ${f.file}  ${f.message}`)
 
 function summaryTail(scenario: StageReport, grading: StageReport, trigger?: StageReport): string {
   if (scenario.status === 'skipped') {
@@ -38,12 +34,12 @@ export function formatTestPretty(result: TestResult): string {
   for (const s of result.stages) {
     if (s.stage === 'deterministic') {
       lines.push(`  deterministic  ${s.status === 'fail' ? pc.red('FAIL') : pc.green('PASS')}`)
-      findingLines(s.findings, lines)
+      lines.push(...harnessFindingLines(s.findings))
     } else if (s.status === 'skipped') {
       lines.push(`  ${s.stage.padEnd(13)}  ${pc.dim(`skipped (${s.note})`)}`)
     } else {
       lines.push(`  ${s.stage.padEnd(13)}  ${s.status === 'fail' ? pc.red('FAIL') : pc.green('PASS')}`)
-      findingLines(s.findings, lines)
+      lines.push(...harnessFindingLines(s.findings))
     }
   }
   lines.push('')

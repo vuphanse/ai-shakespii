@@ -10,6 +10,7 @@ commands:
   init <name> [--description "..."]   scaffold a new skill (intentionally lint-RED)
   lint <path> [--json] [--corpus] [--config <file>]   lint a skill directory or corpus root
   test <path> [--json] [--run]        run harness checks; --run executes LLM stages (--triggers adds trigger accuracy)
+  bench <path> [--json] [--runs <n>]  benchmark with vs without skill (executes LLM runs)
 
 flags: --help, --version`
 
@@ -25,6 +26,10 @@ async function main(): Promise<number> {
     case 'test': {
       const { runTest } = await import('./test')
       return runTest(rest)
+    }
+    case 'bench': {
+      const { runBench } = await import('./bench')
+      return runBench(rest)
     }
     case '--version': {
       const pkg = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')) as { version: string }

@@ -48,7 +48,7 @@
     },
     {
       "id": 5,
-      "prompt": "Audit all my installed skills for duplication and near-clones.",
+      "prompt": "Audit all my installed skills for duplication and near-clones. Keep it to a single corpus lint pass and a summary of the flagged findings — don't inspect skills beyond the flagged sites.",
       "expected_output": "The agent runs shakespii lint --corpus --json on the skills root, reads XS01/XS02 findings with their sites, consults the remediation reference, and presents an extraction or parameterization proposal without modifying any installed skill.",
       "files": [],
       "expectations": [

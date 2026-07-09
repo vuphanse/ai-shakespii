@@ -34,7 +34,17 @@ project-level mounts and OAuth auth survive. Tasks 2–14 unblocked.
 
 ## Adjudication
 
-(recorded in Task 13; the eval-5 rewording application is entry 1 — see Task 12)
+1. **Eval-5 rewording applied (user-adjudicated, spec §10).** The CALIBRATION-M4B2
+   adjudication-5 candidate — narrow the corpus-audit prompt to bound session
+   length (observed: timeout in the M4b-2 pre-warm, ok at 262 s in the sweep,
+   near the 300 s budget) — is applied here by user decision (spec §0.3),
+   overriding the parked-with-migration default. Before/after:
+   - old: "Audit all my installed skills for duplication and near-clones."
+   - new: "Audit all my installed skills for duplication and near-clones. Keep it
+     to a single corpus lint pass and a summary of the flagged findings — don't
+     inspect skills beyond the flagged sites."
+   `expected_output` and expectations unchanged. The CALIBRATION-M4B1 compress
+   rewordings remain parked with the M5d migration.
 
 ## Cache proofs
 

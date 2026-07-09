@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runLlmStages } from '../../src/lib/harness/llm-stages'
@@ -17,6 +17,23 @@ const executorOk = () => completed('Task complete.', { events: [resultEvent('Tas
 const graderOk = (i: number) => completed(gradingReply(evals.evals[i].expectations.map(text => ({ text, passed: true }))))
 
 const freshCache = () => mkdtempSync(join(tmpdir(), 'shakespii-llm-cache-'))
+
+// Single-eval skill fixture (skill_name 'demo-skill', expectations ['ok']) for contamination
+// tests — the compress fixture above has 3 evals and doesn't fit the single-invocation shape.
+const freshSkillAndCache = () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-llm-contam-skill-'))
+  writeFileSync(join(dir, 'SKILL.md'), '---\nname: demo-skill\ndescription: Use when testing scenario contamination plumbing.\nversion: 1.0.0\n---\n\n# Demo\n')
+  mkdirSync(join(dir, 'evals'), { recursive: true })
+  writeFileSync(
+    join(dir, 'evals/evals.json'),
+    JSON.stringify({
+      skill_name: 'demo-skill',
+      evals: [{ id: 1, prompt: 'Do the task.', expected_output: 'The task is done.', expectations: ['ok'] }],
+    }),
+  )
+  return { skill: parseSkill(dir), cacheRoot: mkdtempSync(join(tmpdir(), 'shakespii-llm-contam-cache-')) }
+}
+const graderOkAllPass = () => completed(gradingReply([{ text: 'ok', passed: true }]))
 const opts = (runner: ReturnType<typeof fakeRunner>, cacheRoot: string, fresh = false) => ({
   runner,
   cacheRoot,
@@ -136,4 +153,47 @@ test('grader failure: grading finding, case uncached, scenario run still ok', as
     file: 'evals/evals.json',
     line: null,
   })
+})
+
+const contaminatedExecutor = () =>
+  completed('did the task', {
+    events: [
+      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'compress' } }] } },
+      resultEvent('did the task'),
+    ],
+  })
+
+// Shared skill + cacheRoot across the next two tests: the second test asserts that a
+// cached replay recomputes contamination from the events.jsonl this test persists.
+const contamFixture = freshSkillAndCache()
+
+test('scenario contamination: warn finding with contractual message, status stays pass', async () => {
+  const runner = fakeRunner([contaminatedExecutor(), graderOkAllPass()])
+  const { scenario, grading } = await runLlmStages(contamFixture.skill, opts(runner, contamFixture.cacheRoot))
+  expect(scenario.status).toBe('pass')
+  expect(grading.status).toBe('pass')
+  const warns = scenario.findings.filter(f => f.severity === 'warn')
+  expect(warns).toEqual([
+    { severity: 'warn', message: 'contamination: session invoked non-target skill "compress" (1 invocation(s)) [eval 1]', file: 'evals/evals.json', line: null },
+  ])
+})
+
+test('scenario contamination recomputes from persisted events.jsonl on cached replay', async () => {
+  const replayRunner = fakeRunner([])
+  const { scenario } = await runLlmStages(contamFixture.skill, opts(replayRunner, contamFixture.cacheRoot))
+  expect(scenario.runs[0].cached).toBe(true)
+  expect(scenario.findings.some(f => f.message.startsWith('contamination:'))).toBe(true)
+})
+
+test('scenario invoking the TARGET skill is not contamination', async () => {
+  const targetExecutor = completed('did the task', {
+    events: [
+      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'demo-skill' } }] } },
+      resultEvent('did the task'),
+    ],
+  })
+  const runner = fakeRunner([targetExecutor, graderOkAllPass()])
+  const fresh = freshSkillAndCache()
+  const { scenario } = await runLlmStages(fresh.skill, opts(runner, fresh.cacheRoot))
+  expect(scenario.findings).toEqual([])
 })

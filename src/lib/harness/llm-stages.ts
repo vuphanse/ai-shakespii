@@ -4,6 +4,7 @@ import type { EvalCase, EvalsJson } from '../evals/types'
 import type { ParsedSkill } from '../types'
 import type { ClaudeRunner } from './claude-runner'
 import { RUN_TIMEOUT_MS } from './claude-runner'
+import { contaminationMessage, readPersistedEvents, scanContamination } from './contamination'
 import type { ScenarioRunMeta } from './executor'
 import { buildExecutorPrompt, readValidCachedGrading, stageRunDir } from './executor'
 import { gradeCase, gradingFindings } from './grader'
@@ -19,6 +20,7 @@ export interface LlmStagesOptions {
 }
 
 const err = (message: string): HarnessFinding => ({ severity: 'error', message, file: 'evals/evals.json', line: null })
+const warn = (message: string): HarnessFinding => ({ severity: 'warn', message, file: 'evals/evals.json', line: null })
 
 /** Precondition: the deterministic stage ran on this skill with zero errors. */
 export async function runLlmStages(
@@ -52,6 +54,9 @@ export async function runLlmStages(
         gradingFindingsAll.push(...gradingFindings(evalCase.id, cached))
         passedTotal += cached.summary.passed
         gradedTotal += cached.summary.total
+        for (const hit of scanContamination(readPersistedEvents(dir), [skillName])) {
+          scenarioFindings.push(warn(contaminationMessage(hit, `eval ${evalCase.id}`)))
+        }
         continue
       }
     }
@@ -65,6 +70,10 @@ export async function runLlmStages(
     writeFileSync(join(dir, 'events.jsonl'), result.events.map(e => JSON.stringify(e)).join('\n') + (result.events.length > 0 ? '\n' : ''))
     writeFileSync(join(dir, 'transcript.md'), transcript)
     writeFileSync(join(outputs, 'metrics.json'), `${JSON.stringify(metrics, null, 2)}\n`)
+
+    for (const hit of scanContamination(result.events, [skillName])) {
+      scenarioFindings.push(warn(contaminationMessage(hit, `eval ${evalCase.id}`)))
+    }
 
     const noResult = result.status === 'completed' && extractFinalText(result.events) === null
     if (result.status !== 'completed' || noResult) {
@@ -95,7 +104,7 @@ export async function runLlmStages(
   return {
     scenario: {
       stage: 'scenario',
-      status: scenarioFindings.length > 0 ? 'fail' : 'pass',
+      status: scenarioFindings.some(f => f.severity === 'error') ? 'fail' : 'pass',
       findings: scenarioFindings,
       runs,
     },

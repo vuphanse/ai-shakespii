@@ -5,6 +5,7 @@ import { isRecord, validateTriggersJson } from '../evals/validate'
 import type { ParsedSkill } from '../types'
 import type { ClaudeRunner } from './claude-runner'
 import { RUN_TIMEOUT_MS } from './claude-runner'
+import { contaminationMessage, readPersistedEvents, scanContamination } from './contamination'
 import { runDir, skillContentHash, triggerKey } from './run-dir'
 import { renderTranscript } from './stream-json'
 import type { HarnessFinding, StageReport, TriggerRunMeta } from './types'
@@ -16,6 +17,7 @@ export const TRIGGER_ACCURACY_THRESHOLD = 0.8
 const TRIGGERS = 'evals/triggers.json'
 
 const err = (message: string): HarnessFinding => ({ severity: 'error', message, file: TRIGGERS, line: null })
+const warnF = (message: string): HarnessFinding => ({ severity: 'warn', message, file: TRIGGERS, line: null })
 
 export type TriggerStageReport = Extract<StageReport, { stage: 'trigger'; status: 'pass' | 'fail' }>
 
@@ -106,6 +108,9 @@ export async function runTriggerStage(skill: ParsedSkill, options: TriggerStageO
           reps += 1
           cached += 1
           if (hit.triggered) fired += 1
+          for (const c of scanContamination(readPersistedEvents(dir), [skillName])) {
+            findings.push(warnF(contaminationMessage(c, `query ${qi} rep ${rep}`)))
+          }
           continue
         }
       }
@@ -127,6 +132,9 @@ export async function runTriggerStage(skill: ParsedSkill, options: TriggerStageO
       let result = await attemptOnce()
       if (result.status !== 'completed') result = await attemptOnce() // single retry, identical request
       reps += 1
+      for (const c of scanContamination(result.events, [skillName])) {
+        findings.push(warnF(contaminationMessage(c, `query ${qi} rep ${rep}`)))
+      }
       if (result.status !== 'completed') {
         failStatus = result.status
         findings.push(err(`trigger run failed (query ${qi}, rep ${rep}): ${result.status} — ${result.errorMessage ?? 'no detail'}`))
@@ -157,5 +165,5 @@ export async function runTriggerStage(skill: ParsedSkill, options: TriggerStageO
       findings.push(err(`trigger accuracy ${accuracy.toFixed(2)} below threshold 0.8 (${passed}/${measured} queries)`))
     }
   }
-  return { stage: 'trigger', status: findings.length > 0 ? 'fail' : 'pass', findings, queries: { passed, total: measured }, runs }
+  return { stage: 'trigger', status: findings.some(f => f.severity === 'error') ? 'fail' : 'pass', findings, queries: { passed, total: measured }, runs }
 }

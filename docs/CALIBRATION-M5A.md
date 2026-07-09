@@ -26,7 +26,38 @@ project-level mounts and OAuth auth survive. Tasks 2–14 unblocked.
 
 ## Predictions
 
-(recorded in Task 13, committed before any sweep)
+Committed before any sweep. Setup: compress fixture bench (3 evals × 2
+configurations × 3 runs = 18 runs), using-shakespii trigger sweep (20 queries
+× 3 reps + 6 scenario evals), model sonnet, epoch-2 cache fully cold.
+
+1. **Bench `without_skill` pass_rate mean DROPS from the contaminated 1.0**
+   — predicted mean ∈ [0.40, 0.85] (confidence: medium). Mechanism: the
+   `.original.md` backup convention that made every M4b-2 bare run pass came
+   from the user-global compress skill (CALIBRATION-M4B2 adjudication 1); an
+   isolated bare agent should not spontaneously invent it, so the
+   convention-dependent expectations fail in most bare runs while generic
+   compression expectations still pass.
+2. **Delta pass_rate flips non-negative** — predicted ∈ [+0.10, +0.45]
+   (confidence: medium). M4b-2 measured −0.11 under contamination.
+3. **Bench `with_skill` pass_rate mean** ∈ [0.80, 1.00] (confidence:
+   medium-high). M4b-2 measured 0.8889 with one eval-3 flake run.
+4. **Trigger accuracy holds** ∈ [0.90, 1.00], expected 1.00 (confidence:
+   high). Isolation must not regress staged-skill resolution — spike
+   assertion (b) proved project-level mounts load under the flag.
+5. **Grader retries** ≤ 2 single retries across all gradings and ZERO
+   double-gate fail-fast aborts (confidence: medium). M4b-2 saw ≈6 non-JSON
+   replies in ~24 grader calls; the Task 9 prose tolerance should absorb
+   most of that class.
+6. **Contamination warnings in the NEW sweeps: ZERO** (confidence: high).
+   Isolation excludes user-global skills; bare workspaces mount nothing and
+   with_skill workspaces mount only the target.
+7. **Retro-scan flags `compress`** in ≥ 1 archived M4b-2 bare run dir
+   (confidence: high — CALIBRATION-M4B2 documented three contaminated runs;
+   discriminator: `events.jsonl` + `grading.json` present, `outputs/.claude`
+   absent).
+8. **Eval-5 scenario duration under the narrowed prompt** < 200 s with no
+   timeout (confidence: medium). M4b-2 observed a pre-warm timeout and a
+   262 s live run under the old prompt.
 
 ## Actuals
 

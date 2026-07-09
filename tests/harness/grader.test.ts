@@ -66,6 +66,23 @@ test('extractGraderJson: bare, fenced, and fenced-with-language replies', () => 
   expect(extractGraderJson('not json')).toBeUndefined()
 })
 
+test('extractGraderJson prose tolerance (spec §6.1)', () => {
+  const doc = { expectations: [], summary: { passed: 0, failed: 0, total: 0, pass_rate: 0 } }
+  const json = JSON.stringify(doc)
+  // observed live shapes from the M4b-2 sweep (CALIBRATION-M4B2 adjudication 2)
+  expect(extractGraderJson(`Here is my grading:\n${json}`)).toEqual(doc)
+  expect(extractGraderJson(`${json}\nHope that helps!`)).toEqual(doc)
+  expect(extractGraderJson(`Sure — grading below.\n${json}\nLet me know.`)).toEqual(doc)
+  expect(extractGraderJson(`Sure!\n\`\`\`json\n${json}\n\`\`\``)).toEqual(doc) // prose BEFORE a fence defeats the fence-unwrap; brace fallback catches it
+  // nested braces stay intact under outermost-brace slicing
+  const nested = { a: { b: 1 } }
+  expect(extractGraderJson(`prefix ${JSON.stringify(nested)} suffix`)).toEqual(nested)
+  // still undefined when there is no parsable object
+  expect(extractGraderJson('no json here')).toBeUndefined()
+  expect(extractGraderJson('prefix {not json} suffix')).toBeUndefined()
+  expect(extractGraderJson('}{')).toBeUndefined()
+})
+
 const reply = (texts: Array<[string, boolean]>) => ({
   expectations: texts.map(([text, passed]) => ({ text, passed, evidence: 'ev' })),
   summary: { passed: 0, failed: 0, total: texts.length, pass_rate: 0 },

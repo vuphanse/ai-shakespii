@@ -47,7 +47,12 @@ ${previousReply}
 Reply again with ONLY the corrected JSON.`
 }
 
-/** Trim; unwrap a single fenced block (with or without a language tag); JSON.parse. undefined = parse failure. */
+/**
+ * Trim; unwrap a single fenced block (with or without a language tag);
+ * JSON.parse. If that fails, fall back to the outermost-brace slice of the
+ * unwrapped body — tolerates grader replies that wrap the JSON in prose
+ * (spec §6.1). undefined = no parsable object.
+ */
 export function extractGraderJson(finalText: string): unknown | undefined {
   let body = finalText.trim()
   if (body.startsWith('```')) {
@@ -60,7 +65,14 @@ export function extractGraderJson(finalText: string): unknown | undefined {
   try {
     return JSON.parse(body)
   } catch {
-    return undefined
+    const first = body.indexOf('{')
+    const last = body.lastIndexOf('}')
+    if (first === -1 || last <= first) return undefined
+    try {
+      return JSON.parse(body.slice(first, last + 1))
+    } catch {
+      return undefined
+    }
   }
 }
 

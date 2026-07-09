@@ -5,6 +5,7 @@ import { isRecord, validateBenchmarkJson } from '../evals/validate'
 import type { ParsedSkill } from '../types'
 import type { ClaudeRunner } from './claude-runner'
 import { RUN_TIMEOUT_MS } from './claude-runner'
+import { readPersistedEvents, scanContamination } from './contamination'
 import { buildExecutorPrompt, readValidCachedGrading, stageRunDir } from './executor'
 import { gradeCase } from './grader'
 import { benchKey, HARNESS_SCHEMA_VERSION, runDir, skillContentHash, suiteKey } from './run-dir'
@@ -25,7 +26,7 @@ export interface BenchOptions {
 }
 
 export type BenchOutcome =
-  | { ok: true; doc: BenchmarkJson; docPath: string; cachedRuns: number; totalRuns: number }
+  | { ok: true; doc: BenchmarkJson; docPath: string; cachedRuns: number; totalRuns: number; warnings: string[] }
   | { ok: false; message: string }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100
@@ -89,7 +90,7 @@ export function deriveBenchResult(grading: GradingJson): BenchmarkRun['result'] 
   }
 }
 
-type LiveOutcome = { ok: true; result: BenchmarkRun['result'] } | { ok: false; message: string }
+type LiveOutcome = { ok: true; result: BenchmarkRun['result']; events: unknown[] } | { ok: false; message: string }
 
 async function runLiveSample(
   skill: ParsedSkill,
@@ -135,7 +136,7 @@ async function runLiveSample(
   if ('failure' in graded) return { ok: false, message: failMessage(graded.failure) }
   const result = deriveBenchResult(graded.grading)
   if (result === null) return { ok: false, message: failMessage('internal: grading document missing derivable metrics') }
-  return { ok: true, result }
+  return { ok: true, result, events: attempt.result.events }
 }
 
 /** Precondition: the deterministic stage ran on this skill with zero findings (the bench CLI gate). */
@@ -148,6 +149,7 @@ export async function runBenchSuite(skill: ParsedSkill, options: BenchOptions): 
   const skillHash = skillContentHash(skill)
 
   const rows: BenchmarkRun[] = []
+  const warnings: string[] = []
   let cachedRuns = 0
   const samples: Record<BenchConfig, { pass: number[]; time: number[]; tokens: number[] }> = {
     with_skill: { pass: [], time: [], tokens: [] },
@@ -159,18 +161,25 @@ export async function runBenchSuite(skill: ParsedSkill, options: BenchOptions): 
       for (let runNumber = 1; runNumber <= options.runs; runNumber++) {
         const key = benchKey({ skillHash, evalId: evalCase.id, config, runNumber, model: options.model })
         const dir = runDir(options.cacheRoot, skillName, key)
+        const allowed = config === 'with_skill' ? [skillName] : []
+        const benchWarning = (hit: { skill: string; count: number }): string =>
+          `warn contamination: ${config} eval ${evalCase.id} run ${runNumber} invoked non-target skill "${hit.skill}" (${hit.count} invocation(s))`
         let result: BenchmarkRun['result'] | null = null
         if (!options.fresh) {
           const cached = readValidCachedGrading(dir, evalCase.expectations)
           if (cached !== null) {
             result = deriveBenchResult(cached)
-            if (result !== null) cachedRuns += 1
+            if (result !== null) {
+              cachedRuns += 1
+              for (const hit of scanContamination(readPersistedEvents(dir), allowed)) warnings.push(benchWarning(hit))
+            }
           }
         }
         if (result === null) {
           const live = await runLiveSample(skill, evalCase, config, runNumber, skillName, dir, options)
           if (!live.ok) return live // fail-fast: the matrix is unwritable, spend nothing further (spec §8.1)
           result = live.result
+          for (const hit of scanContamination(live.events, allowed)) warnings.push(benchWarning(hit))
         }
         rows.push({ eval_id: evalCase.id, configuration: config, run_number: runNumber, result })
         samples[config].pass.push(result.pass_rate)
@@ -220,5 +229,5 @@ export async function runBenchSuite(skill: ParsedSkill, options: BenchOptions): 
   const tmp = `${docPath}.tmp`
   writeFileSync(tmp, `${JSON.stringify(benchDoc, null, 2)}\n`)
   renameSync(tmp, docPath)
-  return { ok: true, doc: benchDoc, docPath, cachedRuns, totalRuns: cases.length * CONFIGS.length * options.runs }
+  return { ok: true, doc: benchDoc, docPath, cachedRuns, totalRuns: cases.length * CONFIGS.length * options.runs, warnings }
 }

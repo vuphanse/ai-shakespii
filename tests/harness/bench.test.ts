@@ -7,7 +7,7 @@ import { validateBenchmarkJson } from '../../src/lib/evals/validate'
 import { BENCH_DEFAULT_RUNS, deltaPassRate, deltaTime, deltaTokens, deriveBenchResult, runBenchSuite } from '../../src/lib/harness/bench'
 import { benchKey, runDir, skillContentHash } from '../../src/lib/harness/run-dir'
 import { parseSkill } from '../../src/lib/parser'
-import { completed, fakeRunner, failed, gradingReply } from './helpers'
+import { completed, fakeRunner, failed, gradingReply, resultEvent } from './helpers'
 import type { FakeScript } from './helpers'
 
 const CONFIGS = ['with_skill', 'without_skill'] as const
@@ -266,4 +266,54 @@ test('8. deriveBenchResult unit', () => {
 
   const { execution_metrics: _dropped, ...withoutMetrics } = grading
   expect(deriveBenchResult(withoutMetrics as GradingJson)).toBeNull()
+})
+
+const contaminatedExecutorOk = () =>
+  completed('did the task', {
+    events: [
+      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'compress' } }] } },
+      resultEvent('did the task'),
+    ],
+  })
+
+test('9. contamination warnings: without_skill flags any invocation, with_skill allows the target', async () => {
+  const { skill, cacheRoot } = makeSkill(SIMPLE_EVALS)
+  const script: FakeScript = []
+  for (const evalCase of SIMPLE_EVALS.evals) {
+    // with_skill run invokes the TARGET skill — allowed
+    script.push(completed('did the task', {
+      events: [
+        { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'demo-skill' } }] } },
+        resultEvent('did the task'),
+      ],
+    }))
+    script.push(graderOk(evalCase.expectations, [true]))
+    // without_skill run invokes compress — contamination
+    script.push(contaminatedExecutorOk())
+    script.push(graderOk(evalCase.expectations, [true]))
+  }
+  const outcome = await runBenchSuite(skill, { runner: fakeRunner(script), cacheRoot, model: 'sonnet', runs: 1, fresh: false })
+  if (!outcome.ok) throw new Error(outcome.message)
+  expect(outcome.warnings).toEqual([
+    'warn contamination: without_skill eval 1 run 1 invoked non-target skill "compress" (1 invocation(s))',
+    'warn contamination: without_skill eval 2 run 1 invoked non-target skill "compress" (1 invocation(s))',
+    'warn contamination: without_skill eval 3 run 1 invoked non-target skill "compress" (1 invocation(s))',
+  ])
+})
+
+test('10. contamination warnings recompute on cached replay; document bytes identical', async () => {
+  const { skill, cacheRoot } = makeSkill(SIMPLE_EVALS)
+  const script: FakeScript = []
+  for (const evalCase of SIMPLE_EVALS.evals) {
+    script.push(executorOk())
+    script.push(graderOk(evalCase.expectations, [true]))
+    script.push(contaminatedExecutorOk())
+    script.push(graderOk(evalCase.expectations, [true]))
+  }
+  const first = await runBenchSuite(skill, { runner: fakeRunner(script), cacheRoot, model: 'sonnet', runs: 1, fresh: false })
+  const replay = await runBenchSuite(skill, { runner: fakeRunner([]), cacheRoot, model: 'sonnet', runs: 1, fresh: false })
+  if (!first.ok || !replay.ok) throw new Error('expected ok outcomes')
+  expect(replay.cachedRuns).toBe(6)
+  expect(replay.warnings).toEqual(first.warnings)
+  expect(readFileSync(replay.docPath, 'utf8')).toBe(readFileSync(first.docPath, 'utf8'))
 })

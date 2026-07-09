@@ -3,7 +3,7 @@ import type { BenchmarkConfigSummary, BenchmarkJson } from '../../lib/evals/type
 const configLine = (label: string, s: BenchmarkConfigSummary): string =>
   `  ${label.padEnd(16)}pass_rate ${s.pass_rate.mean.toFixed(2)} ±${s.pass_rate.stddev.toFixed(2)} · time ${s.time_seconds.mean.toFixed(1)}s · tokens ${Math.round(s.tokens.mean)}`
 
-export function formatBenchPretty(doc: BenchmarkJson, cachedRuns: number, totalRuns: number): string {
+export function formatBenchPretty(doc: BenchmarkJson, cachedRuns: number, totalRuns: number, warnings: string[] = []): string {
   const meta = doc.metadata as { skill_name?: unknown; model?: unknown; runs_per_configuration?: unknown }
   const delta = doc.run_summary.delta
   return [
@@ -12,5 +12,6 @@ export function formatBenchPretty(doc: BenchmarkJson, cachedRuns: number, totalR
     configLine('without_skill', doc.run_summary.without_skill),
     `  ${'delta'.padEnd(16)}pass_rate ${delta.pass_rate} · time ${delta.time_seconds}s · tokens ${delta.tokens}`,
     `${cachedRuns}/${totalRuns} run(s) cached`,
+    ...warnings,
   ].join('\n')
 }

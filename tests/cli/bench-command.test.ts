@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runBench } from '../../src/cli/bench'
 import type { EvalsJson } from '../../src/lib/evals/types'
-import { completed, fakeRunner, failed, gradingReply } from '../harness/helpers'
+import { completed, fakeRunner, failed, gradingReply, resultEvent } from '../harness/helpers'
 import type { FakeScript } from '../harness/helpers'
 
 const CLI = join(import.meta.dir, '../../src/cli/index.ts')
@@ -125,5 +125,38 @@ test('run failure with --json: single-line {"error": ...}, exit 1', async () => 
     expect(log.mock.calls[0][0]).toBe(JSON.stringify({ error: 'bench run failed (eval 1, with_skill, run 1): executor timeout — hung again' }))
   } finally {
     log.mockRestore()
+  }
+})
+
+test('contamination with --json: warnings on stderr, stdout document byte-pure', async () => {
+  const { skillDir, cacheRoot } = makeSkillDir()
+  const script: FakeScript = []
+  for (const _evalCase of EVALS.evals) {
+    script.push(executorOk())
+    script.push(graderOk())
+    script.push(completed('did the task', {
+      events: [
+        { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'compress' } }] } },
+        resultEvent('did the task'),
+      ],
+    }))
+    script.push(graderOk())
+  }
+  const log = spyOn(console, 'log').mockImplementation(() => {})
+  const err = spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    const code = await runBench([skillDir, '--json', '--runs', '1'], { runner: fakeRunner(script), cacheRoot })
+    expect(code).toBe(0)
+    expect(log.mock.calls).toHaveLength(1)
+    const doc = JSON.parse(log.mock.calls[0][0] as string)
+    expect(JSON.stringify(doc)).not.toContain('contamination')
+    expect(err.mock.calls.map(c => c[0])).toEqual([
+      'warn contamination: without_skill eval 1 run 1 invoked non-target skill "compress" (1 invocation(s))',
+      'warn contamination: without_skill eval 2 run 1 invoked non-target skill "compress" (1 invocation(s))',
+      'warn contamination: without_skill eval 3 run 1 invoked non-target skill "compress" (1 invocation(s))',
+    ])
+  } finally {
+    log.mockRestore()
+    err.mockRestore()
   }
 })

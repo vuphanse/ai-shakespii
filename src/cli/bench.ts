@@ -93,7 +93,12 @@ export async function runBench(argv: string[], deps: RunBenchDeps = {}): Promise
       console.log(json ? JSON.stringify({ error: outcome.message }) : outcome.message)
       return 1
     }
-    console.log(json ? JSON.stringify(outcome.doc, null, 2) : formatBenchPretty(outcome.doc, outcome.cachedRuns, outcome.totalRuns))
+    if (json) {
+      for (const w of outcome.warnings) console.error(w)
+      console.log(JSON.stringify(outcome.doc, null, 2))
+    } else {
+      console.log(formatBenchPretty(outcome.doc, outcome.cachedRuns, outcome.totalRuns, outcome.warnings))
+    }
     return 0
   } catch (e) {
     console.error(`bench failed: ${(e as Error).message}`)

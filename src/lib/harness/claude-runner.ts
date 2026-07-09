@@ -41,7 +41,7 @@ export function spawnClaudeRunner(claudeBin = 'claude'): ClaudeRunner {
       const started = performance.now()
       const env = { ...process.env }
       delete env.CLAUDECODE
-      const argv = [claudeBin, '-p', req.prompt, '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions', '--model', req.model]
+      const argv = [claudeBin, '-p', req.prompt, '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions', '--model', req.model, '--setting-sources', 'project,local']
       if (req.detect) argv.push('--include-partial-messages')
       let proc: ReturnType<typeof Bun.spawn>
       try {

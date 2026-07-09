@@ -42,7 +42,7 @@ test('completed run: argv, NDJSON events, final text, usage, status', async () =
   expect(res.errorMessage).toBeNull()
   expect(res.durationSeconds).toBeGreaterThanOrEqual(0)
   const args = (await Bun.file(argsFile).text()).trim().split('\n')
-  expect(args).toEqual(['-p', 'do it', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions', '--model', 'sonnet'])
+  expect(args).toEqual(['-p', 'do it', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions', '--model', 'sonnet', '--setting-sources', 'project,local'])
 })
 
 test('CLAUDECODE is stripped from the child environment', async () => {
@@ -95,7 +95,7 @@ test('detect mode adds --include-partial-messages to argv', async () => {
   const bin = stub(`printf '%s\\n' "$@" > "${argsFile}"\necho '{"type":"result","result":"done"}'`)
   await spawnClaudeRunner(bin).run({ prompt: 'x', cwd: dir, model: 'sonnet', timeoutMs: 10_000, detect: { skillName: 'demo-skill' } })
   const args = (await Bun.file(argsFile).text()).trim().split('\n')
-  expect(args).toEqual(['-p', 'x', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions', '--model', 'sonnet', '--include-partial-messages'])
+  expect(args).toEqual(['-p', 'x', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions', '--model', 'sonnet', '--setting-sources', 'project,local', '--include-partial-messages'])
 })
 
 test('detection fires: early process-group kill, status completed, triggered true', async () => {

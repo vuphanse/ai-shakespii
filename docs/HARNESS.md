@@ -1,39 +1,45 @@
 # shakespii test harness — contract
 
-Status: M4b-1 shipped (deterministic + scenario + grading stages; scenario
-and grading are opt-in via --run). M4b-2 pending (TR02 trigger eval,
-benchmark stats). Upstream schema authority: skill-creator
-`references/schemas.md` (pinned evidence, vintage 2026-07 — see
-profiles/default.yaml provenance).
+Status: M4b-1 and M4b-2 shipped (deterministic + scenario + grading +
+trigger stages; scenario/grading are opt-in via --run, trigger additionally
+behind --triggers; benchmarking is a separate `bench` subcommand). Upstream
+schema authority: skill-creator `references/schemas.md` (pinned evidence,
+vintage 2026-07 — see profiles/default.yaml provenance).
 
 ## Stage pipeline
 
-`shakespii test <path> [--json] [--run] [--fresh] [--model <name>]` runs
-three stages, always in this order: `deterministic`, `scenario`, `grading`.
+`shakespii test <path> [--json] [--run] [--fresh] [--model <name>] [--triggers]`
+runs up to four stages, always in this order: `deterministic`, `scenario`,
+`grading`, `trigger`.
 
 - Without `--run`, scenario/grading report
   `status: "skipped", note: "pass --run to execute LLM stages"` and the
-  command is free — no LLM calls, ever. TR01 (lint) delegates to the
+  command is free — no LLM calls, ever. TR01/TR02 (lint) delegate to the
   deterministic stage only; lint never spends tokens.
 - With `--run`, each eval case is executed headlessly (`claude -p`,
   stream-json, model default `sonnet`, 300s timeout per LLM call) and then
   graded by a second LLM call. If the deterministic stage produced errors,
-  both LLM stages report `status: "skipped", note: "deterministic stage
-  failed"` — an invalid suite never burns tokens. Deterministic warnings
-  alone do not block.
-- `--fresh` and `--model` require `--run` (usage error, exit 2, otherwise).
+  scenario/grading (and trigger, if `--triggers` is set) report
+  `status: "skipped", note: "deterministic stage failed"` — an invalid
+  suite never burns tokens. Deterministic warnings alone do not block.
+- `--fresh`, `--model`, and `--triggers` all require `--run` (usage error,
+  exit 2, otherwise).
+- The `trigger` stage only appears in the report at all when `--triggers`
+  is passed — without it, `stages` is exactly the M4b-1 three-element
+  array, byte-identical to pre-M4b-2 output (JSON and pretty).
 
 Exit codes: 0 — no error findings (warnings allowed); 1 — at least one
-error finding (failed expectations, executor/grader failures included);
-2 — run error only (bad usage, unreadable target, `claude` CLI not
-spawnable, unexpected exception).
+error finding (failed expectations, executor/grader/trigger failures
+included); 2 — run error only (bad usage, unreadable target, `claude` CLI
+not spawnable, unexpected exception).
 
 **Permissions bypass — accepted risk.** The executor runs
 `claude -p --dangerously-skip-permissions` inside a disposable per-run
-workspace. This is opt-in (`--run`), intended for the user's own trusted
-skills; the workspace cwd is containment by convention, not a sandbox — a
-malicious skill could escape via Bash. Do NOT point `--run` at untrusted
-third-party skills.
+workspace. `--run`, `bench`, and `--triggers` all spawn it the same way.
+This is opt-in, intended for the user's own trusted skills; the workspace
+cwd is containment by convention, not a sandbox — a malicious skill could
+escape via Bash. Do NOT point `--run`, `bench`, or `--triggers` at
+untrusted third-party skills.
 
 ## test-JSON v1
 
@@ -44,8 +50,11 @@ runs` with runs entries `evalId, cached, status, durationSeconds`
 (`status` ∈ ok | timeout | nonzero-exit | no-result). Executed grading
 stage: `stage, status, findings, expectations` with `expectations`
 `{passed, total}` counting graded expectations across cold and cached
-cases. Skipped stages: `stage, status, note`. `summary` counts all findings
-across stages.
+cases. Executed trigger stage: `stage, status, findings, queries, runs`
+with `queries` `{passed, total}` (see the Trigger stage section below for
+the full shape and semantics). Skipped stages: `stage, status, note`.
+`summary` counts all findings across stages. The `trigger` element is
+present in `stages` only when `--triggers` was passed.
 
 ## Executor
 
@@ -55,9 +64,9 @@ cold path stages a workspace (`outputs/`): the skill mounted at
 its skill-relative path. Prompt: force-load preamble ("Read
 .claude/skills/<name>/SKILL.md first…") plus the eval prompt verbatim —
 scenario evals measure capability with the skill; natural triggering is
-TR02's concern (M4b-2). Executor failures (timeout / nonzero-exit /
-completed with no result event) become scenario error findings; the case
-is not graded and stays uncached.
+TR02's concern, measured separately by the trigger stage below. Executor
+failures (timeout / nonzero-exit / completed with no result event) become
+scenario error findings; the case is not graded and stays uncached.
 
 ## Grader
 
@@ -69,6 +78,195 @@ runner-level failures — at most two grader calls per case); the summary is
 recomputed by the harness (LLM arithmetic is never trusted); grading.json
 is written atomically (tmp + rename). Grading findings: one error per
 failed expectation, quoting the text and the grader's evidence.
+
+## Trigger stage (`test --run --triggers`, `src/lib/harness/trigger-stage.ts`)
+
+Measures whether the skill's `name` + `description` actually make Claude
+invoke it — the natural-triggering half TR02 exists to guard, separate
+from scenario's "does it work once mounted" question.
+
+**Precondition and input gate.** Requires the deterministic stage to have
+run clean (same precondition as scenario/grading). Given that, the stage
+reads `evals/triggers.json` through a fixed gate, first failure wins (all
+findings `severity: error`, `file: 'evals/triggers.json'`, `line: null`):
+missing from the inventory → `evals/triggers.json missing — required by
+--triggers`; unreadable (oversized/binary) or unparsable → `evals/triggers.json
+is not valid JSON`; schema-invalid → one `evals/triggers.json: <path> —
+<message>` finding per `validateTriggersJson` diagnostic; `skill_name`
+mismatched against `evals/evals.json` → `evals/triggers.json: skill_name —
+must match evals.json skill_name`. Any gate failure short-circuits before
+any LLM call — `queries: {passed: 0, total: 0}`, `runs: []`.
+
+**Reps, majority scoring, accuracy.** Constants:
+`TRIGGER_REPS = 3`, `TRIGGER_PASS_THRESHOLD = 0.5`,
+`TRIGGER_ACCURACY_THRESHOLD = 0.8`. For each query (in document order):
+run up to 3 reps, each cache-checked independently via `triggerKey`; a
+live rep stages a run dir (skill mounted at
+`outputs/.claude/skills/<skill_name>/SKILL.md`, no eval `files`, no
+force-load preamble — the prompt is the query verbatim, because injecting
+a preamble would defeat the measurement) and calls the runner with
+`detect: { skillName }` (see Runner detect mode below). Per query: `rate =
+fired / 3`; the query passes if `should_trigger ? rate >= 0.5 : rate <
+0.5`. A query's accuracy only counts once all 3 reps complete; `queries.total`
+(`measured`) excludes queries that hit a run failure. Suite-level
+`accuracy = passed / measured` (skipped entirely, no finding, when
+`measured === 0`); below `TRIGGER_ACCURACY_THRESHOLD` it becomes a finding
+`trigger accuracy <acc> below threshold 0.8 (<P>/<Q> queries)` (`acc` =
+`toFixed(2)`).
+
+**Failure semantics.** A rep gets exactly one retry (identical query,
+workspace restaged first). If still not `completed`, the query is
+abandoned immediately — no further reps for it — with finding `trigger
+run failed (query <i>, rep <r>): <status> — <errorMessage or 'no detail'>`
+(`i` 0-based query index), and the loop continues to the next query. That
+query is excluded from `{passed, total}` but still appears in `runs` with
+its partial `triggered`/`reps`/`cached` counts and `status` ∈
+`timeout | nonzero-exit`. A timeout or nonzero-exit is a run failure, not
+evidence the skill "didn't trigger" — it is never folded into the
+fired/not-fired tally.
+
+**`triggerKey` and cache.** `triggerKey({skillHash, query, rep, model}) =`
+first 16 hex of `sha256("1\n<skillHash>\ntrigger\n<sha256hex(query)>\n<rep>\n<model>")`
+— the query text itself is pre-hashed before being embedded, keeping the
+key formula's outer structure stable regardless of query length. Cache
+gate (`readValidCachedTrigger`): `trigger.json` must exist, parse, and its
+`query`/`shouldTrigger` must match the current query verbatim, with
+`triggered` a boolean — anything else is a self-healing miss (same pattern
+as `grading.json`).
+
+**Artifacts.** `<cacheRoot>/runs/<skillName>/<triggerKey>/` holds
+`events.jsonl` (raw stream-json), `transcript.md`, and `trigger.json`
+(written only for a completed rep). `trigger.json` key order is
+contractual: `query, shouldTrigger, rep, triggered, status,
+durationSeconds`.
+
+**Report shape.** `{ stage: 'trigger', status: 'pass' | 'fail', findings,
+queries: { passed, total }, runs }`. `runs` entries (`TriggerRunMeta`):
+`queryIndex, shouldTrigger, triggered, reps, cached, status` — note
+`triggered` here is the **fired-rep count for the query** (0–3), not the
+per-rep boolean stored in `trigger.json`; the two use the same field name
+at different granularities. `status` ∈ `ok | timeout | nonzero-exit`.
+`status: 'fail'` iff `findings.length > 0` (gate failure, any rep failure,
+or accuracy below threshold).
+
+**Pretty summary.** Appended only when `--triggers` was passed and the
+stage isn't skipped: `` · trigger: <P>/<Q> query|queries accurate (<C>
+cached)`` (house pluralization: `query` iff `Q === 1`; `<C>` sums `cached`
+across every run entry, including failed/excluded queries). Skip variant
+when `--triggers` is set and the deterministic stage failed:
+`scenario/grading/trigger skipped (deterministic stage failed)`.
+
+**Runner detect mode and the run_eval.py deviations.** Detection is ported
+from skill-creator's `run_eval.py` (`src/lib/harness/detect.ts`) with two
+adjudicated deviations (spec §6, per the module's own docstring):
+- **Verdict fires at `content_block_stop`/`message_stop`, not mid-delta.**
+  `partial_json` fragments for a pending `Skill`/`Read` tool_use are
+  accumulated and only evaluated once the block (or the message) closes —
+  a substring match against a half-streamed JSON fragment would false-fire.
+- **An unrelated first tool_use does not end the scan.** Unlike
+  `run_eval.py`'s "first tool decides" behavior, an initial `Bash` (or any
+  non-`Skill`/non-`Read`) call leaves the detector watching; a later
+  `Skill`/`Read` call in the same transcript can still fire the verdict.
+
+Two further spec §6 provisions, not counted among the module's "two
+deviations" but load-bearing for correctness:
+- **`Read` fires only on a `file_path` ENDING in the mounted
+  `.claude/skills/<name>/SKILL.md`** — an exact-suffix `endsWith` check on
+  the parsed tool input, not a substring match. `.../SKILL.md.bak` and a
+  longer nested path like `.../SKILL.md/notes.txt` must NOT count.
+- **Timeout ≠ no-trigger** (runner-level, not part of the detector itself).
+  A timed-out or nonzero-exit probe carries no `triggered` field at all
+  (`RunnerResult.triggered` is present iff `detect` was requested AND
+  `status === 'completed'`) — the trigger stage treats it as a run failure
+  (see Failure semantics above), never as "the skill did not trigger."
+
+On verdict, the runner kills the whole process group early (`--include-
+partial-messages` streaming + `SIGKILL` on the group) rather than waiting
+out the full turn — reps stay fast even when the model would otherwise
+keep working after invoking the skill.
+
+## Bench (`shakespii bench <path> [--json] [--runs <n>] [--model <name>] [--fresh]`, `src/lib/harness/bench.ts`)
+
+A separate subcommand (not a `test` stage): benchmarks a skill's effect on
+capability by running the same eval suite twice per case — once with the
+skill mounted, once without — over multiple repetitions, and reports
+pass-rate/time/token deltas.
+
+**Deterministic gate.** Stricter than `test --run`: `bench` requires **zero
+deterministic findings of any severity** (warnings included, not just
+errors) before it will spend a token. On any finding: findings printed to
+stderr (`harnessFindingLines`), then `bench requires a valid eval suite —
+fix the findings above first`, exit 2.
+
+**Matrix and staging.** For each eval case (ascending `id`), for each
+configuration in `['with_skill', 'without_skill']` (that order), for
+`runNumber` 1..`options.runs` (default `BENCH_DEFAULT_RUNS = 3`):
+- `with_skill` — identical to the M4b-1 scenario executor: `stageRunDir`
+  mounts the skill at `outputs/.claude/skills/<skill_name>/`, copies the
+  eval's `files`, and the prompt is `buildExecutorPrompt` (force-load
+  preamble + eval prompt).
+- `without_skill` — `stageBareRunDir`: the eval's `files` are copied as
+  plain task inputs with **no skill mount at all**, and the prompt is
+  `evalCase.prompt` **verbatim**, no preamble — the eval files are inputs
+  to the task, not a hint that a skill exists.
+
+**Run-failure contract.** Executor: one retry (identical request, restage
+first) if `status !== 'completed'` OR the final assistant text is
+unextractable; if still bad, `bench run failed (eval <id>, <config>, run
+<n>): executor <status> — <errorMessage or 'no result event'>` (`<status>`
+∈ `timeout | nonzero-exit | no-result` — `no-result` is a completed run
+with no extractable text). On executor success, grading reuses the M4b-1
+grader (`gradeCase`) with its own shared retry budget; a grader failure
+surfaces as `bench run failed (eval <id>, <config>, run <n>):
+<graded.failure>` — the grader's failure string verbatim, no `executor`
+prefix. Either failure **aborts the whole suite immediately** (fail-fast):
+`runBenchSuite` returns on the first bad run, no partial `benchmark.json`
+is ever written, and the failed run's `grading.json` is never written (so
+it stays an uncached miss). Failure surfaces on **stdout**, exit 1; with
+`--json` the only stdout is the single-line `{"error":"<message>"}`.
+
+**Result derivation.** `deriveBenchResult` turns a `grading.json` into a
+`BenchmarkRun.result` — the same derivation for live and cached runs
+(replay byte-identity by construction): `pass_rate` (round4), `passed`,
+`failed`, `total`, `time_seconds` (round2, from
+`timing.executor_duration_seconds`), `tokens` (input + output, unrounded
+integer sum), `tool_calls`, `errors`. `null` (a field missing or non-
+numeric) is treated as an underivable, self-healing cache miss — mirrors
+the `grading.json` cache-hit gate.
+
+**Stats.** Samples are pooled **per configuration across every eval case
+and run** (not per-eval-case): `pass_rate` stats use 4-decimal rounding,
+`time_seconds`/`tokens` stats use 2-decimal rounding; each stat object is
+`{mean, stddev, min, max}`. `stddev` is sample standard deviation (n−1
+denominator), `0` when n < 2 (`src/lib/harness/stats.ts`). Deltas
+(`with_skill.mean − without_skill.mean`, computed from the already-rounded
+stored means) are always signed: `pass_rate` `(+|-)D.DD`, `time_seconds`
+`(+|-)D.D`, `tokens` `(+|-)D` (rounded to an integer); a zero delta renders
+`+0.00` / `+0.0` / `+0`.
+
+**`benchKey`/`suiteKey`.** `benchKey({skillHash, evalId, config, runNumber,
+model}) =` first 16 hex of `sha256("1\n<skillHash>\n<evalId>\n<config>\n<runNumber>\n<model>")`
+— 6 segments, structurally distinct from `runKey`'s 4; `bench` never reuses
+a `test --run` scenario cache entry, even for the same skill/eval/model.
+`suiteKey({skillHash, model, runs}) =` first 16 hex of
+`sha256("1\n<skillHash>\nbench-suite\n<model>\n<runs>")`.
+
+**Document.** Written to `<cacheRoot>/runs/<skillName>/bench-<suiteKey>/benchmark.json`
+(atomic: tmp + rename) after `validateBenchmarkJson` passes — a failure
+there is an internal bug, not a user-facing bench failure:
+`internal: benchmark document failed validation (<path>: <message>)`,
+stdout, exit 1, nothing written. Key order: `metadata` (`skill_name,
+model, runs_per_configuration, harness_schema_version` — **no timestamp**,
+so replaying the identical suite/model/runs combination against an
+unchanged skill reproduces a byte-identical document), `runs` (`eval_id,
+configuration, run_number, result`), `run_summary` (`with_skill,
+without_skill, delta`).
+
+**Exit codes.** 0 — `benchmark.json` written and printed (pretty or
+`--json`). 1 — a run failed, or the internal validation failure above.
+2 — usage errors (bad flags, non-directory target, missing `SKILL.md`),
+the deterministic gate, or an uncaught exception (`bench failed: <msg>`,
+mirrors `test failed: <msg>`).
 
 ## Run-dir and cache (`src/lib/harness/run-dir.ts`)
 
@@ -90,9 +288,9 @@ failed expectation, quoting the text and the grader's evidence.
 - `HARNESS_SCHEMA_VERSION` (currently 1) bumps when the layout or grading
   contract changes. Eval runs are on-demand and cached — never per-commit.
 
-## M4b-2 output contracts
-
+`triggerKey`/`benchKey`/`suiteKey` share this module and its `SAFE_SEGMENT`
+skill-name guard (defense in depth — the deterministic stage already
+rejects an unsafe `skill_name` before any run dir is composed); see the
+Trigger stage and Bench sections above for their formulas and layouts.
 `validateBenchmarkJson` (`src/lib/evals/validate.ts`) encodes the
-`benchmark.json` shape (configurations `with_skill`/`without_skill`,
-nested result, run_summary aggregate stats) that the M4b-2 benchmark
-writer must satisfy.
+`benchmark.json` shape that the Bench section documents in full.

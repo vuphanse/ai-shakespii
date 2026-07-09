@@ -123,3 +123,16 @@ docs/HARNESS.md, docs/CALIBRATION-M4A.md). The scaffold template and the
 using-shakespii evals migrated from a pre-schema shape (`skill` key, string
 ids) to the skill-creator schema (`skill_name`, integer ids). TR02 remains
 pending M4b (requires live trigger runs).
+
+**M4b-2 completion (2026-07-09):** TR02 is implemented and live — warn,
+single-finding cap (TR01 precedent), exactly four finding shapes in
+first-match-wins order: no `evals/triggers.json` (`file: 'SKILL.md'`);
+`evals/triggers.json fails validation (<n> error(s))` (parse failure counts
+as 1); `evals/triggers.json has <n> queries, fewer than <minQueries>`;
+`evals/triggers.json has no negative queries (should_trigger: false)`.
+Profile pin: `TR02: { severity: warn, options: { minQueries: 16 } }`
+(`profiles/default.yaml`). Static and tokenless, same as TR01 — measured
+trigger accuracy is a separate concern, living in `shakespii test --run
+--triggers` (docs/HARNESS.md, "Trigger stage"); `shakespii bench` shipped
+alongside it as an independent subcommand (docs/HARNESS.md, "Bench").
+Calibration: docs/CALIBRATION-M4B2.md.

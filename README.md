@@ -26,7 +26,8 @@ A CLI (`shakespii`) that operates on standard Agent Skills (`SKILL.md` format):
 - `shakespii lint <path>` — validate a skill against the rule catalog; `--corpus`
   lints a whole directory of skills (cross-skill XS rules included) and `--config`
   applies profile overrides
-- `shakespii test <path> [--json] [--run] [--fresh] [--model <name>]` — static checks on a skill's eval suite for free; `--run` executes the evals headlessly and LLM-grades every expectation, cached per (skill content, eval, model)
+- `shakespii test <path> [--json] [--run] [--fresh] [--model <name>] [--triggers]` — static checks on a skill's eval suite for free; `--run` executes the evals headlessly and LLM-grades every expectation, cached per (skill content, eval, model); `--triggers` (requires `--run`) additionally measures trigger accuracy against `evals/triggers.json`
+- `shakespii bench <path> [--json] [--runs <n>] [--model <name>] [--fresh]` — benchmark a skill with vs without the skill mounted, producing `benchmark.json` with pass-rate/time/token deltas over `--runs` (default 3) repetitions per configuration
 - Writer and publishing workflows come later (see roadmap)
 
 The differentiator is **enforcement**: the ecosystem already has skill-writing guidance (superpowers `writing-skills`, Anthropic's `skill-creator`), but nothing lints skills and nothing runs their evals. Our July 2026 audit of 30 installed skills found zero versioned skills, zero working test harnesses, and large-scale copy-paste duplication — see the audit doc.

@@ -56,10 +56,12 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 - [x] Calibration sweep (docs/CALIBRATION-M4B1.md): using-shakespii + compress fixture, 8/8 cache proof
 - [x] using-shakespii v0.4.0 teaches the `--run` loop
 
-## M4b-2 — Test harness, LLM half: trigger eval + benchmark
+## M4b-2 — Test harness, LLM half: trigger eval + benchmark (done 2026-07-09)
 
-- [ ] Trigger-accuracy eval (TR02) per skill-creator's design (~20 labeled queries incl. near-miss negatives, threshold on held-out split)
-- [ ] Benchmark stats (`benchmark.json`, with/without skill, runs-per-eval > 1, variance)
+- [x] Trigger-accuracy eval (TR02): `evals/triggers.json` schema/validator, TR02 lint rule, runner detect mode (streaming early-kill), and the `trigger` stage behind `shakespii test --run --triggers` (3 reps/query majority rule, 0.8 accuracy threshold — measure-only; the earlier "threshold on held-out split" wording described the retired optimizer design) (8d90dd3..5488cd5)
+- [x] Benchmark stats: `shakespii bench <path>` producing a validated `benchmark.json` (with/without skill, runs-per-configuration default 3, mean/stddev/min/max + signed deltas) (8d90dd3..5488cd5)
+- [x] Calibration sweep (docs/CALIBRATION-M4B2.md) (a6e8a49, 60de666)
+- [x] using-shakespii v0.5.0 teaches the bench and trigger-accuracy loops (8ed0767)
 
 (Live-compress evals sync moved to M5 with the personal-skill migration — decided 2026-07-09.)
 

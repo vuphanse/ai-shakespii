@@ -6,7 +6,7 @@ Most prompt tools focus on writing better prompts. ai-shakespii focuses on desig
 
 ## Status
 
-**M4b-1 and M4b-2 shipped — the test harness's LLM half is live.** `git clone` + `bun install` + `bun link` gives you `shakespii init`, `shakespii lint` (full single-skill rule catalog, pretty + `--json` output, plus `--corpus` for cross-skill XS01/XS02 checks and `--config` for profile overrides), `shakespii test` (scenario runs and rubric grading via `--run`, trigger accuracy via `--run --triggers`), and `shakespii bench` (pass-rate/time/token deltas with vs without the skill mounted), and `skills/using-shakespii/` teaches agents to drive them (see the install section below). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M5 (the writer, implemented as a skill itself).
+**M4b-1, M4b-2, and M5a shipped — the test harness is hardened.** `git clone` + `bun install` + `bun link` gives you `shakespii init`, `shakespii lint` (full single-skill rule catalog, pretty + `--json` output, plus `--corpus` for cross-skill XS01/XS02 checks and `--config` for profile overrides), `shakespii test` (scenario runs and rubric grading via `--run`, trigger accuracy via `--run --triggers`), and `shakespii bench` (pass-rate/time/token deltas with vs without the skill mounted), and `skills/using-shakespii/` teaches agents to drive them (see the install section below). M5a isolated every headless session (`--setting-sources project,local`) and added post-hoc contamination detection — see the bench caveat below. Strategy, audit evidence, and the roadmap live in `docs/`; next up is M5b (the writer, implemented as a skill itself).
 
 ## Install the companion skill
 
@@ -29,6 +29,25 @@ A CLI (`shakespii`) that operates on standard Agent Skills (`SKILL.md` format):
 - `shakespii test <path> [--json] [--run] [--fresh] [--model <name>] [--triggers]` — static checks on a skill's eval suite for free; `--run` executes the evals headlessly and LLM-grades every expectation, cached per (skill content, eval, model); `--triggers` (requires `--run`) additionally measures trigger accuracy against `evals/triggers.json`
 - `shakespii bench <path> [--json] [--runs <n>] [--model <name>] [--fresh]` — benchmark a skill with vs without the skill mounted, producing `benchmark.json` with pass-rate/time/token deltas over `--runs` (default 3) repetitions per configuration
 - Writer and publishing workflows come later (see roadmap)
+
+**Bench caveat.** `shakespii test --run`, `--triggers`, and `bench` all spawn
+headless `claude` sessions with `--dangerously-skip-permissions` inside a
+disposable per-run workspace — this is opt-in and intended for your own
+trusted skills; the workspace is containment by convention, not a sandbox.
+**Do not point them at untrusted third-party skills.** Separately, `bench`'s
+`without_skill` baseline used to be contaminated by same-named skills already
+installed globally (a skill named `compress` in your bare-agent baseline
+answering for the `compress` skill under test, inflating its own delta to
+zero or negative). As of M5a every session is isolated
+(`--setting-sources project,local`), which excludes user-level skills and
+plugins — the baseline-contamination class is mitigated — and a post-hoc
+contamination scanner flags any non-target skill invocation that still slips
+through as a `warn`-severity finding (`bench --json`'s stdout stays
+byte-pure; warnings go to stderr). What isolation does **not** exclude is
+your `~/.claude/CLAUDE.md` user memory file, which still enters every
+session and can perturb scenario/trigger behavior identically across both
+bench configurations — documented, not yet mitigated (see
+`docs/HARNESS.md` and `docs/CALIBRATION-M5A.md`).
 
 The differentiator is **enforcement**: the ecosystem already has skill-writing guidance (superpowers `writing-skills`, Anthropic's `skill-creator`), but nothing lints skills and nothing runs their evals. Our July 2026 audit of 30 installed skills found zero versioned skills, zero working test harnesses, and large-scale copy-paste duplication — see the audit doc.
 

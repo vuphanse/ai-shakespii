@@ -63,13 +63,38 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 - [x] Calibration sweep (docs/CALIBRATION-M4B2.md) (a6e8a49, 60de666)
 - [x] using-shakespii v0.5.0 teaches the bench and trigger-accuracy loops (8ed0767)
 
-(Live-compress evals sync moved to M5 with the personal-skill migration — decided 2026-07-09.)
+(Live-compress evals sync moved to M5d with the personal-skill migration — decided 2026-07-09.)
 
-## M5 — Writer + publishing
+## M5a — Harness hardening + executor isolation (done 2026-07-10)
+
+- [x] Isolation spike: 3-workspace positive-control probe proving `--setting-sources project,local` excludes user-global skills while project mounts and OAuth survive — gated all Task 2+ work (166fcd7)
+- [x] `RUN_CACHE_VERSION = 2` comparability epoch across all four run keys (`runKey`, `triggerKey`, `benchKey`, `suiteKey`); `HARNESS_SCHEMA_VERSION` stays 1 for output documents (c4cbcca)
+- [x] Executor isolation: `--setting-sources project,local` appended uniformly to every runner session (scenario, trigger, bench both configurations, grader) (4b91722)
+- [x] `settleWithGrace` outer bound (`SETTLE_OUTER_BOUND_MS`): bounds the stdout/stderr drain-then-cancel sequence so a runner session can never hang the harness indefinitely (a582709)
+- [x] Detector exact-match semantics (`Read` fires only on an exact `.claude/skills/<name>/SKILL.md` suffix, not a substring) (b4e0eef)
+- [x] Contamination scanner + warnings: pure post-hoc scan over persisted/live events, `severity: 'warn'` findings for scenario/trigger, a plain-string warning list for bench (warnings never flip stage status, `bench --json` stdout stays byte-pure) (d41d13b..6597f75)
+- [x] Grader prose-tolerance fix (fenced/prose-wrapped JSON replies parsed via outermost-brace fallback) and `grader-fail-<attempt>.md` persistence for gate-failed replies (32c52db..984f837)
+- [x] Hygiene minors: shared bench fixture builder, invariant throws, tightened test pins, injected-fake gate proofs (82d0f9e)
+- [x] Eval-5 corpus-audit prompt reworded to bound session length — adjudicated application of the CALIBRATION-M4B2 candidate, applied here by user decision rather than parked with the M5d migration (5cbde39)
+- [x] Calibration sweep (docs/CALIBRATION-M5A.md): spike evidence, predictions committed pre-sweep, bench + trigger + scenario actuals, adjudicated findings, retro-scan of the M4b-2 corpus, both cache proofs green (a396274, 6079505)
+
+Commit range: 166fcd7..6079505.
+
+## M5b — Writer-as-skill
 
 - [ ] Writer implemented as a skill (interview → draft → critique → refine loop), itself linted and tested by shakespii
+- [ ] Description optimization: use the M5a clean trigger-accuracy baseline (0.80, un-primed) to improve `name`/`description` trigger phrasing
+- [ ] ai-cortex promotion path: recurring pattern/gotcha memories surfaced as candidate skill drafts (writer-or-later, not yet decided — see Open decisions)
+- [ ] Full memory-file hermeticity: `--setting-sources project,local` excludes user-level skills/plugins but not `~/.claude/CLAUDE.md` (docs/CALIBRATION-M5A.md adjudication 2) — investigate a hermeticity option for scenario/trigger sessions
+- [ ] Headless-aware eval design: scenario evals whose expectations assume a human-in-the-loop ("confirm before spending", "ask clarifying questions") stall single-turn headless sessions at a confirmation prompt (docs/CALIBRATION-M5A.md adjudication 7) — either reword affected expectations for headless execution or add skill-body guidance for non-interactive contexts
+
+## M5c — Install gate + npm publish
+
 - [ ] Install gate: lint must pass before a skill lands in `~/.claude/skills/`
-- [ ] ai-cortex promotion path: recurring pattern/gotcha memories surfaced as candidate skill drafts
+- [ ] npm publish graduation (distribution decision, M2 spec): move off local `bun link` for the MVP
+
+## M5d — Personal-skill migration
+
 - [ ] Personal-skill migration (decided 2026-07-09): run the 13 personal skills through the audit loop, collapse the 5 kickoff clones into one parameterized skill (triggers validated with TR02), and sync the repaired compress evals into the live skill (after the CALIBRATION-M4B1 eval rewordings are adjudicated). The dogfood corpus at `~/.claude/skills/` stays read-only until this lands.
 
 ## M6 — Curated library
@@ -83,8 +108,9 @@ Author the missing engineering skills through shakespii's own pipeline (dogfood)
 | Decision | Options on the table | Notes |
 |---|---|---|
 | Runtime language | ~~TypeScript/Node (or Bun), Python, Go~~ | **Decided 2026-07-07: TypeScript on Bun** (M2 spec) |
-| Distribution | ~~npm package, Homebrew, plain git clone~~ | **Decided 2026-07-07: local link (`bun link`) for the MVP; npm publish graduates at M5** |
+| Distribution | ~~npm package, Homebrew, plain git clone~~ | **Decided 2026-07-07: local link (`bun link`) for the MVP; npm publish graduates at M5c** |
 | CLI name | `shakespii` | **Confirmed 2026-07-07** |
 | Score model | ~~Severity counts only vs 0–100 aggregate score~~ | **Decided 2026-07-08: severity counts only** — no research-backed weighting exists; revisit condition: M6 library ranking (M3a spec §0) |
-| Personal-skill migration | ~~Now, after M4b-2, or at M5~~ | **Decided 2026-07-09: defer to M5** — writer + install gate are the migration tooling; the kickoff-clone collapse is validated with TR02; the live-compress evals sync travels with it (live corpus stays read-only until then) |
+| Personal-skill migration | ~~Now, after M4b-2, or at M5~~ | **Decided 2026-07-09: defer to M5d** — writer + install gate are the migration tooling; the kickoff-clone collapse is validated with TR02; the live-compress evals sync travels with it (live corpus stays read-only until then) |
 | XS02 similarity threshold | ~~0.55, 0.65, keep 0.8~~ | **Decided 2026-07-09: 0.65** — forms the 4-skill kickoff cluster (all edges ≥0.6607, CALIBRATION-M3B); quick-task (best edge 0.5547) stays out; 0.55 rejected as untested corpus-wide precision risk. Implementation: standalone TDD change before M4b-2 |
+| ai-cortex promotion path | Ship with M5b writer, or later once the writer's dogfooded | **Writer-or-later, not yet decided** — recurring pattern/gotcha memories surfaced as candidate skill drafts; listed under M5b pending a decision on sequencing relative to the writer's own dogfooding |

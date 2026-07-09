@@ -4,8 +4,15 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { ParsedSkill } from '../types'
 
-/** Bumps when the run-dir layout or grading contract changes; invalidates stale caches. */
+/** Version of the OUTPUT documents (benchmark.json metadata, grading contract). Independent of RUN_CACHE_VERSION. */
 export const HARNESS_SCHEMA_VERSION = 1
+
+/**
+ * Comparability epoch of cached runs. Bumps whenever executor session semantics
+ * change (M5a: --setting-sources isolation), so runs recorded under older
+ * semantics never replay as comparable. Old run dirs stay on disk, ignored.
+ */
+export const RUN_CACHE_VERSION = 2
 
 export function cacheRoot(env: Record<string, string | undefined> = process.env): string {
   if (env.SHAKESPII_CACHE_DIR) return env.SHAKESPII_CACHE_DIR
@@ -33,7 +40,7 @@ export function skillContentHash(skill: ParsedSkill): string {
 
 export function runKey(input: { skillHash: string; evalId: number; model: string }): string {
   return createHash('sha256')
-    .update(`${HARNESS_SCHEMA_VERSION}\n${input.skillHash}\n${input.evalId}\n${input.model}`)
+    .update(`${RUN_CACHE_VERSION}\n${input.skillHash}\n${input.evalId}\n${input.model}`)
     .digest('hex')
     .slice(0, 16)
 }
@@ -42,7 +49,7 @@ const sha256hex = (s: string): string => createHash('sha256').update(s).digest('
 
 export function triggerKey(input: { skillHash: string; query: string; rep: number; model: string }): string {
   return createHash('sha256')
-    .update(`${HARNESS_SCHEMA_VERSION}\n${input.skillHash}\ntrigger\n${sha256hex(input.query)}\n${input.rep}\n${input.model}`)
+    .update(`${RUN_CACHE_VERSION}\n${input.skillHash}\ntrigger\n${sha256hex(input.query)}\n${input.rep}\n${input.model}`)
     .digest('hex')
     .slice(0, 16)
 }
@@ -55,14 +62,14 @@ export function benchKey(input: {
   model: string
 }): string {
   return createHash('sha256')
-    .update(`${HARNESS_SCHEMA_VERSION}\n${input.skillHash}\n${input.evalId}\n${input.config}\n${input.runNumber}\n${input.model}`)
+    .update(`${RUN_CACHE_VERSION}\n${input.skillHash}\n${input.evalId}\n${input.config}\n${input.runNumber}\n${input.model}`)
     .digest('hex')
     .slice(0, 16)
 }
 
 export function suiteKey(input: { skillHash: string; model: string; runs: number }): string {
   return createHash('sha256')
-    .update(`${HARNESS_SCHEMA_VERSION}\n${input.skillHash}\nbench-suite\n${input.model}\n${input.runs}`)
+    .update(`${RUN_CACHE_VERSION}\n${input.skillHash}\nbench-suite\n${input.model}\n${input.runs}`)
     .digest('hex')
     .slice(0, 16)
 }

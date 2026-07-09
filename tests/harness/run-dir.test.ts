@@ -1,10 +1,12 @@
 import { expect, test } from 'bun:test'
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseSkill } from '../../src/lib/parser'
 import {
   HARNESS_SCHEMA_VERSION,
+  RUN_CACHE_VERSION,
   benchKey,
   cacheRoot,
   ensureRunDir,
@@ -109,4 +111,16 @@ test('suiteKey varies by model and runs', () => {
   expect(suiteKey(base)).toMatch(/^[0-9a-f]{16}$/)
   expect(suiteKey({ ...base, runs: 5 })).not.toBe(suiteKey(base))
   expect(suiteKey({ ...base, model: 'opus' })).not.toBe(suiteKey(base))
+})
+
+test('RUN_CACHE_VERSION epoch 2 leads every key formula; HARNESS_SCHEMA_VERSION stays 1', () => {
+  expect(HARNESS_SCHEMA_VERSION).toBe(1)
+  expect(RUN_CACHE_VERSION).toBe(2)
+  const skillHash = 'a'.repeat(64)
+  const hex16 = (s: string) => createHash('sha256').update(s).digest('hex').slice(0, 16)
+  expect(runKey({ skillHash, evalId: 1, model: 'sonnet' })).toBe(hex16(`2\n${skillHash}\n1\nsonnet`))
+  const qHash = createHash('sha256').update('Query one.').digest('hex')
+  expect(triggerKey({ skillHash, query: 'Query one.', rep: 1, model: 'sonnet' })).toBe(hex16(`2\n${skillHash}\ntrigger\n${qHash}\n1\nsonnet`))
+  expect(benchKey({ skillHash, evalId: 1, config: 'with_skill', runNumber: 1, model: 'sonnet' })).toBe(hex16(`2\n${skillHash}\n1\nwith_skill\n1\nsonnet`))
+  expect(suiteKey({ skillHash, model: 'sonnet', runs: 3 })).toBe(hex16(`2\n${skillHash}\nbench-suite\nsonnet\n3`))
 })

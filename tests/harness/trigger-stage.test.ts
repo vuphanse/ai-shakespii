@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runTriggerStage, TRIGGER_ACCURACY_THRESHOLD, TRIGGER_PASS_THRESHOLD, TRIGGER_REPS } from '../../src/lib/harness/trigger-stage'

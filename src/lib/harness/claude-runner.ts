@@ -156,6 +156,8 @@ export function spawnClaudeRunner(claudeBin = 'claude'): ClaudeRunner {
         }
         const stdoutPromise = readStdout()
         const stderrPromise = readStderr()
+        stdoutPromise.catch(() => {})
+        stderrPromise.catch(() => {})
         exitCode = await proc.exited
         await settleWithGrace(stdoutPromise, stdoutReader, undefined)
         stderr = await settleWithGrace(stderrPromise, stderrReader, '')

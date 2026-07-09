@@ -6,7 +6,7 @@ Most prompt tools focus on writing better prompts. ai-shakespii focuses on desig
 
 ## Status
 
-**M4a shipped — the test harness's static half is live.** `git clone` + `bun install` + `bun link` gives you `shakespii init`, `shakespii lint` (full single-skill rule catalog, pretty + `--json` output, plus `--corpus` for cross-skill XS01/XS02 checks and `--config` for profile overrides), and `shakespii test` (skill-creator eval-suite validation, TR01, run-dir/cache skeleton), and `skills/using-shakespii/` teaches agents to drive them (see the install section below). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M4b (the harness's LLM half — scenario runs and grading).
+**M4b-1 and M4b-2 shipped — the test harness's LLM half is live.** `git clone` + `bun install` + `bun link` gives you `shakespii init`, `shakespii lint` (full single-skill rule catalog, pretty + `--json` output, plus `--corpus` for cross-skill XS01/XS02 checks and `--config` for profile overrides), `shakespii test` (scenario runs and rubric grading via `--run`, trigger accuracy via `--run --triggers`), and `shakespii bench` (pass-rate/time/token deltas with vs without the skill mounted), and `skills/using-shakespii/` teaches agents to drive them (see the install section below). Strategy, audit evidence, and the roadmap live in `docs/`; next up is M5 (the writer, implemented as a skill itself).
 
 ## Install the companion skill
 

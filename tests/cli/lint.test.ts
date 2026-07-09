@@ -7,7 +7,7 @@ const CLI = join(import.meta.dir, '../../src/cli/index.ts')
 const FIXTURES = join(import.meta.dir, '../fixtures')
 const run = (args: string[]) => Bun.spawnSync(['bun', CLI, ...args], { cwd: tmpdir() })
 
-test('minimal-pass: exit 0, pretty success line', () => {
+test('minimal-pass: exit 0, pretty problems line (TR02 warning)', () => {
   const r = run(['lint', join(FIXTURES, 'minimal-pass')])
   expect(r.exitCode).toBe(0)
   expect(r.stdout.toString()).toContain('✖ 1 problems (0 errors, 1 warnings)') // minimal-pass has no evals/triggers.json — TR02 warns

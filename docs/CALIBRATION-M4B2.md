@@ -90,16 +90,147 @@ early via the `Skill` tool path more often than the `Read` path.
 
 ## Actuals — bench
 
-(recorded after the sweep)
+Sweep required three passes (fail-fast + resume-from-cache working as designed):
+
+- Pass 1: exit 1 — `bench run failed (eval 1, with_skill, run 3): grader returned invalid grading (reply is not valid JSON)`
+- Pass 2: exit 1 — `bench run failed (eval 2, with_skill, run 1): grader returned invalid grading (reply is not valid JSON)`
+- Pass 3: exit 0 — complete 18/18 matrix; `benchmark.json` written and validator-clean.
+
+`run_summary` verbatim:
+
+```json
+{
+ "with_skill": {
+  "pass_rate": { "mean": 0.8889, "stddev": 0.3333, "min": 0, "max": 1 },
+  "time_seconds": { "mean": 118.05, "stddev": 49.45, "min": 66.65, "max": 205.43 },
+  "tokens": { "mean": 4060.44, "stddev": 1729.25, "min": 1623, "max": 6553 }
+ },
+ "without_skill": {
+  "pass_rate": { "mean": 1, "stddev": 0, "min": 1, "max": 1 },
+  "time_seconds": { "mean": 111.73, "stddev": 57.85, "min": 57.84, "max": 201.05 },
+  "tokens": { "mean": 2858.33, "stddev": 2233.19, "min": 975, "max": 8095 }
+ },
+ "delta": { "pass_rate": "-0.11", "time_seconds": "+6.3", "tokens": "+1202" }
+}
+```
+
+Pretty (cached re-run):
+
+```
+bench compress · model sonnet · 3 run(s)/config
+  with_skill      pass_rate 0.89 ±0.33 · time 118.0s · tokens 4060
+  without_skill   pass_rate 1.00 ±0.00 · time 111.7s · tokens 2858
+  delta           pass_rate -0.11 · time +6.3s · tokens +1202
+18/18 run(s) cached
+```
+
+Grader-retry observability proven live: 2 of the 18 persisted gradings carry
+`timing.grader_retries: 1` with cause `["gate: invalid grading (reply is not
+valid JSON)"]`. The only non-perfect with_skill run is eval 3 (idempotency,
+0/2) — the flaky surface predicted in item 5.
 
 ## Actuals — triggers
 
-(recorded after the sweep)
+Pre-warm (`test --run --json`): exit 1 — evals 1–4, 6 graded and cached
+(11/18 expectations passed, consistent with the M4b-1 sweep's known eval-2
+clarify-and-stop behavior); eval 5 timed out (its reproducible M4b-1 flake)
+and stayed uncached. In the recorded sweep eval 5 then completed `ok` cold
+(262.03 s) and cached — the flake is genuinely intermittent.
+
+Trigger stage verbatim: `status: pass`, `queries: {passed: 20, total: 20}`,
+`findings: []` — **accuracy 1.00**, 60/60 reps completed, zero run failures,
+zero rep retries.
+
+| # | Label | Fired | Verdict | Predicted |
+|---|---|---|---|---|
+| 0 | pos | 3/3 | PASS | PASS (high) |
+| 1 | pos | 3/3 | PASS | PASS (high) |
+| 2 | pos | 2/3 | PASS | PASS (high) |
+| 3 | pos | 3/3 | PASS | PASS (high) |
+| 4 | pos | 2/3 | PASS | PASS (medium) |
+| 5 | pos | 3/3 | PASS | PASS (medium) |
+| 6 | pos | 3/3 | PASS | PASS (low) |
+| 7 | pos | 3/3 | PASS | PASS (low) |
+| 8 | pos | 3/3 | PASS | PASS (high) |
+| 9 | pos | 3/3 | PASS | PASS (high) |
+| 10 | pos | 3/3 | PASS | PASS (medium) |
+| 11 | pos | 3/3 | PASS | PASS (high) |
+| 12 | neg | 0/3 | PASS | PASS (high) |
+| 13 | neg | 1/3 | PASS | PASS (high) |
+| 14 | neg | 0/3 | PASS | PASS (high) |
+| 15 | neg | 0/3 | PASS | PASS (high) |
+| 16 | neg | 0/3 | PASS | PASS (high) |
+| 17 | neg | 0/3 | PASS | PASS (low) |
+| 18 | neg | 0/3 | PASS | PASS (high) |
+| 19 | neg | 0/3 | PASS | PASS (medium) |
+
+Environment note: the machine's global `~/.claude/skills/` also contains an
+installed using-shakespii (the M2.5 symlink). Trigger measurement remains
+valid — detection keys on the skill NAME (Skill tool) or a path ending in
+`.claude/skills/using-shakespii/SKILL.md` (Read tool), and the duplicate
+shares both, so a session pulling either copy measures the same
+name+description signal.
 
 ## Adjudication
 
-(recorded after the sweeps)
+1. **Bench delta direction (prediction 1) — WRONG. Class: environment
+   contamination (miscalibration with a structural cause).** The
+   `without_skill` runs were not bare: transcripts show the executor invoking
+   the user's globally-installed personal `compress` skill (explicit
+   `Tool: Skill — {"skill":"compress"}` and "Using the compress skill…"
+   narration in three independent runs; `outputs/.claude/` verified absent,
+   so the mount was not the source). The `.original.md` backup convention
+   that let every without_skill run pass the backup expectation comes from
+   `~/.claude/skills/compress/SKILL.md` line 6. The harness behaved exactly
+   as specified — executor sessions inherit the user's global claude
+   environment, and workspace isolation (A2) is an explicit spec §13
+   non-goal. Consequence: on machines where an equivalent skill is installed
+   globally, bench's without_skill baseline is contaminated and the delta
+   under-measures the skill's value. This is now MEASURED evidence
+   prioritizing the M5 executor-isolation follow-up. No in-phase fix (argv
+   and staging are frozen surfaces; isolation is adjudicated M5-or-later).
+2. **Grader non-JSON reply rate (prediction 6) — under-predicted. Class:
+   miscalibration.** Predicted ≤ 2 single retries across 36 gradings; actual
+   ≈ 6 non-JSON replies across ~24 grader calls (2 recovered by the shared
+   retry, 2 samples failing BOTH attempts → fail-fast aborts, recovered by
+   re-run resume-from-cache). Every contract behaved correctly (retry,
+   observability fields, fail-fast, uncached failure, cache resume).
+   Improvement candidates RECORDED, not applied: (a) `extractGraderJson`
+   could tolerate a prose prefix before the JSON object; (b) failed grader
+   replies are not persisted anywhere (observability gap — only successful
+   gradings leave artifacts). Both feed M5.
+3. **Trigger predictions — all 20 correct; accuracy 1.00 at the ceiling of
+   the predicted 0.85–1.00 band.** No adjudication required. The v0.4.0
+   description generalized to the two new surfaces (bench, trigger checks)
+   better than predicted (#6/#7 fired 3/3), so no description rewording is
+   even recorded.
+4. **Trigger cache-proof procedure — plan-authoring gap. Class: protocol
+   adaptation (recorded).** The plan's proof normalized only trigger
+   `cached` counts, assuming the pre-warm left scenario fully cached; eval
+   5's intermittent timeout defeated that (it entered the recorded sweep
+   cold). Field-level diff confirmed the ONLY sweep-vs-replay differences
+   were cache metadata (trigger `cached` 0→3 on all 20 queries; scenario
+   eval-5 `cached false→true`, `durationSeconds 262.03→0`) with every
+   measurement field byte-equal. The proof script was widened to normalize
+   scenario cache metadata and to additionally assert the replay is fully
+   cached in BOTH stages. Measurements unaffected.
+5. **Eval 5 timeout intermittence — matches the M4b-1 known flake** (timeout
+   in pre-warm, `ok` at 262 s in the sweep, i.e. near the 300 s budget).
+   Eval-authoring rewording RECORDED, not applied: eval 5's corpus-audit
+   prompt could be narrowed to bound session length.
+6. Remaining predictions held: with_skill pass_rate 0.8889 ∈ [0.70, 0.95];
+   delta time +6.3 s ∈ [+5, +60]; with_skill stddev 0.3333 ≤ 0.35 driven by
+   eval 3 as predicted. Token delta +1202 fell below the predicted
+   [+2000, +20000] band (minor miscalibration; the mount is cheaper than
+   estimated).
+
+Zero harness bugs: no code, profile, eval, or query changes made in-phase.
 
 ## Cache proofs
 
-(recorded after the replays)
+1. **BENCH-REPLAY-OK** — second `bench … --json` byte-identical (`cmp`
+   silent) at zero live sessions; pretty re-run reports `18/18 run(s)
+   cached`.
+2. **TRIGGER-REPLAY-OK** — replay fully cached (every trigger rep
+   `cached === reps`; every scenario run `cached: true`), and sweep vs
+   replay identical after normalizing cache metadata only (adjudication 4).

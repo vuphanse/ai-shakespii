@@ -1,7 +1,7 @@
 ---
 name: using-shakespii
 description: "Use when creating a new agent skill or auditing, linting, testing, or fixing an existing one — drives the shakespii CLI (init, lint --json, test --run) to scaffold standard SKILL.md skills and resolve findings until clean."
-version: 0.4.0
+version: 0.5.0
 ---
 
 # using-shakespii
@@ -90,6 +90,50 @@ in `evals/evals.json`; `scenario` findings mean the executor run itself
 failed (timeout, crash); `grading` findings quote the failed expectation
 and the grader's evidence — fix the skill (or a genuinely wrong
 expectation, with the human's approval) and re-run until exit 0.
+
+### Benchmarking a skill
+
+Once the evals pass, measure the skill's actual capability impact:
+
+```bash
+shakespii bench <skill-dir> --json
+```
+
+`bench` runs every eval in `evals/evals.json` with the skill mounted and
+again without it, `--runs <n>` times per configuration (default 3), and
+writes `benchmark.json`. Read `run_summary.delta` for the with-vs-without
+capability delta on pass rate, time, and tokens — that delta is the signal,
+not the exit code: exit 0 means the matrix was measured and written, full
+stop, whether the skill helped, hurt, or made no difference; `bench` never
+gates on the delta. Exit 1 means a run failed after its retry and nothing
+was written; exit 2 means the eval suite has deterministic findings (fix
+those first, same gate as `test`) or the `claude` CLI is unavailable.
+`--model <name>` overrides the default executor model (sonnet); `--fresh`
+bypasses the cache to force a fresh measurement. Like `--run`, `bench`
+spends real tokens per run — confirm with the human before the first run
+on a suite, and never point it at an untrusted third-party skill: both
+`--run` and `bench` execute with `--dangerously-skip-permissions`.
+
+### Measuring trigger accuracy
+
+A skill only helps if it fires at the right moments, so measure that
+directly rather than trusting the description by eye. Author
+`evals/triggers.json`: at least 16 labeled queries mixing prompts that
+should trigger the skill with near-miss negatives that should not — TR02
+lints this set statically on every `lint` run (missing file, schema
+errors, too few queries, no negatives). Then run it for real:
+
+```bash
+shakespii test <skill-dir> --run --triggers --json
+```
+
+The trigger stage mounts the skill and issues each query 3 times against a
+real session, scores a query as triggered when a majority of its reps
+fire, and reports overall accuracy across the set. That stage fails (an
+error finding) below 0.8 accuracy. Treat description edits as a
+deliberate loop, not a guess: adjust the wording, re-run with `--fresh` to
+bypass the cache and force fresh measurement, and stop once accuracy holds
+at 0.8 or above without regressing queries that already passed.
 
 Authoring branch — create a new skill:
 

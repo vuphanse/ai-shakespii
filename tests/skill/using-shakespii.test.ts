@@ -66,3 +66,10 @@ test('triggers.json carries 20 labeled queries: 12 positive, 8 near-miss negativ
   expect(doc.queries.filter(q => !q.should_trigger).length).toBe(8)
   for (const q of doc.queries) expect(q.query.length).toBeGreaterThan(0)
 })
+
+test('v0.5.0 teaches the bench and trigger loops', async () => {
+  const raw = await Bun.file(join(SKILL_DIR, 'SKILL.md')).text()
+  expect(raw).toContain('version: 0.5.0')
+  expect(raw).toContain('shakespii bench')
+  expect(raw).toContain('--triggers')
+})

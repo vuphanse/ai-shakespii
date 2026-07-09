@@ -108,6 +108,15 @@ lint --corpus` (docs/CALIBRATION-M3B.md); `--config` profile overrides shipped
 HY05 gained the compound-command segment scan; ST04's quoted-utterance question was
 resolved by the recorded experiment. TR01/TR02 remain pending M4 (harness-backed).
 
+**XS02 threshold adjudication (2026-07-09):** the provisional `similarity: 0.8` in
+`profiles/default.yaml` was lowered to **0.65** by user decision, resolving the
+miscalibration recorded in CALIBRATION-M3B (measured kickoff-clone Jaccard range
+0.4564–0.6964; the "~80% shared bodies" evidence in the XS02 row above was a
+containment measure, not intersection-over-union). At 0.65 the corpus forms one
+4-skill cluster (`ai-whisper-bugfix`/`-deliberation`/`-ralph`/`-sdd`); `quick-task`
+(best edge 0.5547) stays out by design — 0.55 was rejected as an untested
+corpus-wide precision risk. See the CALIBRATION-M3B addendum for the full rationale.
+
 **M4a completion (2026-07-08):** TR01 is implemented and live (warn,
 single-finding cap, delegating validation to the harness deterministic stage —
 docs/HARNESS.md, docs/CALIBRATION-M4A.md). The scaffold template and the

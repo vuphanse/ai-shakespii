@@ -35,7 +35,7 @@ test('KEYSTONE clone-pair: XS01 17-line block + XS02 cluster of 2, exit 0', () =
     {
       ruleId: 'XS02',
       severity: 'warn',
-      message: 'near-clone cluster of 2 skills (pairwise similarity ≥ 0.8) — consider parameterizing into one skill',
+      message: 'near-clone cluster of 2 skills (pairwise similarity ≥ 0.65) — consider parameterizing into one skill',
       sites: [
         { skill: 'corpus-clone-a', file: 'SKILL.md', startLine: 7, endLine: 38 },
         { skill: 'corpus-clone-b', file: 'SKILL.md', startLine: 7, endLine: 38 },

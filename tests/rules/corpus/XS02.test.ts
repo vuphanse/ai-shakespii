@@ -2,14 +2,14 @@ import { expect, test } from 'bun:test'
 import { XS02 } from '../../../src/lib/rules/corpus/XS02'
 import { cleanSkillRaw, corpusFromRaws, ctxFor } from '../../helpers/skill'
 
-const CTX = ctxFor('XS02') // { similarity: 0.8 }
+const CTX = ctxFor('XS02') // { similarity: 0.65 }
 
 test('two skills with identical bodies form one cluster of two', () => {
   const raw = cleanSkillRaw()
   const skills = corpusFromRaws([raw, raw], ['clone-a', 'clone-b'])
   const f = XS02.check(skills, CTX)
   expect(f).toHaveLength(1)
-  expect(f[0].message).toBe('near-clone cluster of 2 skills (pairwise similarity ≥ 0.8) — consider parameterizing into one skill')
+  expect(f[0].message).toBe('near-clone cluster of 2 skills (pairwise similarity ≥ 0.65) — consider parameterizing into one skill')
   expect(f[0].sites.map(s => s.skill)).toEqual(['clone-a', 'clone-b'])
 })
 
@@ -18,7 +18,7 @@ test('three identical bodies form ONE cluster of three, not three pair findings'
   const skills = corpusFromRaws([raw, raw, raw], ['clone-a', 'clone-b', 'clone-c'])
   const f = XS02.check(skills, CTX)
   expect(f).toHaveLength(1)
-  expect(f[0].message).toBe('near-clone cluster of 3 skills (pairwise similarity ≥ 0.8) — consider parameterizing into one skill')
+  expect(f[0].message).toBe('near-clone cluster of 3 skills (pairwise similarity ≥ 0.65) — consider parameterizing into one skill')
   expect(f[0].sites.map(s => s.skill)).toEqual(['clone-a', 'clone-b', 'clone-c'])
 })
 

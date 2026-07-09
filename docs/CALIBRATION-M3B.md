@@ -240,3 +240,19 @@ delta). No rule's count moved on the superpowers root. The only counts that diff
 CALIBRATION-M3 at all are XS01/XS02 (new in M3b, corpus-only, no M3 baseline to regress against)
 and the `skipped` array (`personal-preferences`, addressed above) — confirming corpus mode reuses
 the single-skill engine unchanged, per spec §8.
+
+## Addendum (2026-07-09): XS02 threshold adjudicated — 0.65 applied
+
+The user decision deferred above is now resolved: `similarity: 0.65` was chosen over ~0.55 and
+over keeping the provisional 0.8, and is applied to `profiles/default.yaml` (its inline comment
+now records this adjudication). Rationale: 0.65 forms the 4-skill kickoff cluster
+(`bugfix`/`deliberation`/`ralph`/`sdd`, all six pairwise edges ≥ 0.6607) with a working margin,
+while `quick-task` (best edge 0.5547) stays out — a defensible exclusion given its measured
+divergence; ~0.55 was rejected because its more permissive corpus-wide bar carries an untested
+false-positive risk on unrelated skill pairs. The change was made test-first: the three pinned
+XS02 message strings (`tests/rules/corpus/XS02.test.ts`, `tests/cli/corpus-keystone.test.ts`)
+were re-pinned to `≥ 0.65` and confirmed failing against the 0.8 profile before the profile edit
+— a deliberate, user-decided behavior change, not an assertion weakened to absorb a finding. With
+0.65 live, a corpus lint of `~/.claude/skills` is expected to raise one XS02 warning naming the
+four-skill cluster; that finding is the actionable signal feeding the M5 personal-skill migration
+(kickoff-clone collapse, deferred by the same 2026-07-09 adjudication round).

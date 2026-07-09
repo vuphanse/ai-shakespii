@@ -70,7 +70,7 @@ rules:
   HY06: warn                  # quantitative claims eval-backed or marked unverified
   # XS — cross-skill (require --corpus context)
   XS01: { severity: warn, options: { minLines: 15, minSkills: 2 } }
-  XS02: { severity: warn, options: { similarity: 0.8 } }   # calibrate in M3 vs kickoff-clone evidence
+  XS02: { severity: warn, options: { similarity: 0.65 } }  # calibrated 2026-07-09 vs kickoff-clone evidence (CALIBRATION-M3B adjudication)
   # TR — trigger & eval (harness-backed)
   TR01: { severity: warn, options: { minCases: 3 } }
   TR02: { severity: warn, options: { minQueries: 16, requireNearMissNegatives: true } }

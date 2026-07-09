@@ -541,6 +541,26 @@ test('Read of an unrelated path does not fire', () => {
   expect(d.feed(stop)).toBe(false)
 })
 
+test('Read match is ends-with, not substring: SKILL.md.bak and nested paths do not fire (spec §6)', () => {
+  const d = createDetector('demo-skill')
+  d.feed(start('Read'))
+  d.feed(delta('{"file_path": "/w/outputs/.claude/skills/demo-skill/SKILL.md.bak"}'))
+  expect(d.feed(stop)).toBe(false)
+  d.feed(start('Read'))
+  d.feed(delta('{"file_path": "/w/.claude/skills/demo-skill/SKILL.md/notes.txt"}'))
+  expect(d.feed(stop)).toBe(false)
+})
+
+test('fallback: assistant Read tool_use applies the same ends-with rule', () => {
+  const d = createDetector('demo-skill')
+  const read = (file_path: string) => ({
+    type: 'assistant',
+    message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path } }] },
+  })
+  expect(d.feed(read('/w/.claude/skills/demo-skill/SKILL.md.bak'))).toBe(false)
+  expect(d.feed(read('/w/.claude/skills/demo-skill/SKILL.md'))).toBe(true)
+})
+
 test('unrelated tool_use yields no verdict and scanning continues (deviation from run_eval.py first-tool-decides)', () => {
   const d = createDetector('demo-skill')
   expect(d.feed(start('Bash'))).toBe(false)
@@ -599,8 +619,20 @@ export function createDetector(skillName: string): Detector {
   let accumulated = ''
   let fired = false
 
-  const matches = (tool: 'Skill' | 'Read', inputText: string): boolean =>
-    tool === 'Skill' ? inputText.includes(skillName) : inputText.includes(readNeedle)
+  const matches = (tool: 'Skill' | 'Read', inputText: string): boolean => {
+    if (tool === 'Skill') return inputText.includes(skillName)
+    // Read fires only on a path ENDING in the mounted SKILL.md (spec §6 —
+    // ".../SKILL.md.bak" or a longer nested path must NOT count). The input is
+    // complete JSON at block stop; parse it and test file_path with endsWith.
+    try {
+      const input = JSON.parse(inputText) as Record<string, unknown>
+      return typeof input.file_path === 'string' && input.file_path.endsWith(readNeedle)
+    } catch {
+      // defensive fallback for an unparsable accumulation: a JSON string value
+      // ending with the path is the needle immediately followed by its closing quote
+      return inputText.includes(`${readNeedle}"`)
+    }
+  }
 
   const settle = (): boolean => {
     if (pending !== null && matches(pending, accumulated)) fired = true
@@ -2354,7 +2386,7 @@ git commit -m "feat(cli): shakespii bench — guards, deterministic gate, pretty
 
 ### Task 11: Calibration — CALIBRATION-M4B2.md (CONTROLLER-EXECUTED, spends tokens)
 
-**This task is executed by the controller directly, not dispatched to a subagent.** Long sweeps run in the controller's own background shell (subagent background shells die at turn end — M4b-1 lifecycle gotcha). Budget: bench sweep 18 executor + 18 grader sessions on the compress fixture; trigger sweep 60 detect sessions on using-shakespii; both on sonnet; plus the cache-proof re-runs at zero tokens.
+**This task is executed by the controller directly, not dispatched to a subagent.** Long sweeps run in the controller's own background shell (subagent background shells die at turn end — M4b-1 lifecycle gotcha). Budget: bench sweep 18 executor + 18 grader sessions on the compress fixture; using-shakespii scenario/grading pre-warm ~6 executor + 6 grader sessions (Task 3's `triggers.json` rotated the skill hash, so the M4b-1 cache entries are stale — any post-Task-3 `--run` spends these once regardless); trigger sweep 60 detect sessions; all on sonnet; plus the cache-proof re-runs at zero tokens.
 
 **Files:**
 - Create: `docs/CALIBRATION-M4B2.md` + mirror `~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/CALIBRATION-M4B2.md`
@@ -2376,24 +2408,48 @@ bun src/cli/index.ts bench tests/fixtures/harness/compress --json > /tmp/m4b2-be
 
 Expected: exit 0 after ~18 executor + 18 grader sessions. Record the full `benchmark.json` verbatim in `## Actuals — bench`.
 
-- [ ] **Step 3: Trigger sweep (background shell)**
+- [ ] **Step 3: Trigger sweep (background shell), preceded by a scenario/grading pre-warm**
+
+Task 3's `triggers.json` is in the skill inventory, so `skillContentHash` rotated and the M4b-1 scenario/grading cache entries no longer apply. Pre-warm them under the current hash FIRST, so the recorded trigger-sweep actual has scenario/grading fully cached and the Step 4 comparison is not polluted by cold-vs-warm scenario/grading metadata (`cached`/`durationSeconds`):
 
 ```bash
+bun src/cli/index.ts test skills/using-shakespii --run --json > /tmp/m4b2-prewarm.json; echo "exit=$?"
 bun src/cli/index.ts test skills/using-shakespii --run --triggers --json > /tmp/m4b2-triggers-actual.json; echo "exit=$?"
 ```
 
-Expected: ~60 detect sessions (plus scenario/grading cache hits if M4b-1 cache entries survive — record either way). Record the trigger stage object verbatim in `## Actuals — triggers`.
+Expected: the pre-warm spends ~6 executor + 6 grader sessions; the recorded sweep then shows scenario/grading fully cached and spends ~60 detect sessions (trigger runs entries `cached: 0`). Record the trigger stage object verbatim in `## Actuals — triggers`.
 
 - [ ] **Step 4: Cache proofs (zero tokens)**
+
+Bench: `--json` prints the `benchmark.json` document verbatim, which carries no cache metadata, so whole-file `cmp` is the correct instrument:
 
 ```bash
 bun src/cli/index.ts bench tests/fixtures/harness/compress --json > /tmp/m4b2-bench-replay.json
 cmp /tmp/m4b2-bench-actual.json /tmp/m4b2-bench-replay.json && echo BENCH-REPLAY-OK
-bun src/cli/index.ts test skills/using-shakespii --run --triggers --json > /tmp/m4b2-triggers-replay.json
-cmp /tmp/m4b2-triggers-actual.json /tmp/m4b2-triggers-replay.json && echo TRIGGER-REPLAY-OK
 ```
 
-Expected: both `-OK` markers; the bench pretty re-run reports `18/18 run(s) cached`. Record both proofs.
+Trigger: whole-file `cmp` is NOT valid here — the report's trigger runs entries carry `cached` counts that legitimately differ between the recorded sweep (`cached: 0`) and its replay (`cached: 3`). The proof is two-part: (a) the replay is fully cached (every rep served from cache), and (b) sweep and replay are identical everywhere else — same verdicts, same scoring, same findings, and scenario/grading byte-identical thanks to the Step 3 pre-warm:
+
+```bash
+bun src/cli/index.ts test skills/using-shakespii --run --triggers --json > /tmp/m4b2-triggers-replay.json
+bun -e '
+const load = async (p) => JSON.parse(await Bun.file(p).text())
+const a = await load("/tmp/m4b2-triggers-actual.json")
+const b = await load("/tmp/m4b2-triggers-replay.json")
+const trigger = (r) => r.stages.find((s) => s.stage === "trigger")
+for (const q of trigger(b).runs) {
+  if (q.cached !== q.reps) throw new Error(`replay rep not fully cached: query ${q.queryIndex}`)
+}
+const norm = (r) => JSON.stringify({
+  ...r,
+  stages: r.stages.map((s) => (s.stage === "trigger" ? { ...s, runs: s.runs.map((q) => ({ ...q, cached: 0 })) } : s)),
+})
+if (norm(a) !== norm(b)) throw new Error("sweep and replay reports differ beyond trigger cache counts")
+console.log("TRIGGER-REPLAY-OK")
+'
+```
+
+Expected: `BENCH-REPLAY-OK` and `TRIGGER-REPLAY-OK`; the bench pretty re-run reports `18/18 run(s) cached`. Record both proofs (including the normalization script's role) in the calibration doc.
 
 - [ ] **Step 5: Adjudicate deviations and commit**
 
@@ -2454,7 +2510,7 @@ git commit -m "feat(skill): using-shakespii v0.5.0 — bench and trigger-accurac
 - Sync this plan: `cp docs/superpowers/plans/2026-07-09-m4b2-harness-trigger-benchmark.md ~/.ai-pref-nsync/local-docs/ai-shakespii/plans/`
 
 - [ ] **Step 1: HARNESS.md** — add two sections mirroring the existing M4b-1 sections' structure and depth:
-  - **Trigger stage (`test --run --triggers`)**: contract summary (input gate, reps/threshold constants, majority scoring, accuracy 0.8, failure semantics: one retry then continue-to-next-query with exclusion from totals), `triggerKey` formula, artifacts layout (`<cacheRoot>/runs/<skillName>/<triggerKey>/` with `events.jsonl`, `transcript.md`, `trigger.json` + its key order), report shapes, the run_eval.py deviations (timeout ≠ no-trigger; unrelated first tool doesn't end the scan; verdict at block stop).
+  - **Trigger stage (`test --run --triggers`)**: contract summary (input gate, reps/threshold constants, majority scoring, accuracy 0.8, failure semantics: one retry then continue-to-next-query with exclusion from totals), `triggerKey` formula, artifacts layout (`<cacheRoot>/runs/<skillName>/<triggerKey>/` with `events.jsonl`, `transcript.md`, `trigger.json` + its key order), report shapes, the run_eval.py deviations (timeout ≠ no-trigger; unrelated first tool doesn't end the scan; verdict at block stop; Read fires only on a `file_path` ENDING in the mounted `.claude/skills/<name>/SKILL.md` — not any substring match).
   - **Bench (`shakespii bench`)**: matrix and staging (`with_skill` = M4b-1 executor semantics; `without_skill` = files staged, no mount, no preamble, prompt verbatim), `benchKey`/`suiteKey` formulas, run-failure contract (executor one retry, grader shared budget, fail-fast abort, exact failure output), stats pins (sample stddev n−1, rounding, delta formats), `benchmark.json` location + metadata (no timestamp — replay byte-identity), exit codes.
   - Extend the existing `--dangerously-skip-permissions` risk warning to name `bench` and `--triggers` verbatim alongside `--run`.
 - [ ] **Step 2: LINT-RULES.md** — add the TR02 "implemented" note (implemented 2026-07-09, M4b-2; four finding shapes; profile `TR02: { severity: warn, options: { minQueries: 16 } }`) beside the M3b-style implementation notes.

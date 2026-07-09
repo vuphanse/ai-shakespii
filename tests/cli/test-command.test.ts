@@ -73,7 +73,14 @@ test('unknown option: loud failure, exit 2', () => {
   const r = run(['test', join(FIXTURES, 'two-cases'), '--bogus'])
   expect(r.exitCode).toBe(2)
   expect(r.stderr.toString()).toContain('unknown option: --bogus')
-  expect(r.stderr.toString()).toContain('usage: shakespii test <path> [--json] [--run] [--fresh] [--model <name>]')
+  expect(r.stderr.toString()).toContain('usage: shakespii test <path> [--json] [--run] [--fresh] [--model <name>] [--triggers]')
+})
+
+test('--triggers requires --run: exit 2, guard message with usage', () => {
+  const r = run(['test', join(FIXTURES, 'two-cases'), '--triggers'])
+  expect(r.exitCode).toBe(2)
+  expect(r.stderr.toString()).toContain('--triggers requires --run')
+  expect(r.stderr.toString()).toContain('usage: shakespii test <path> [--json] [--run] [--fresh] [--model <name>] [--triggers]')
 })
 
 test('--fresh and --model require --run; --model requires a value', () => {

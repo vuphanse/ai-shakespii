@@ -9,7 +9,7 @@ const USAGE = `usage: shakespii <command>
 commands:
   init <name> [--description "..."]   scaffold a new skill (intentionally lint-RED)
   lint <path> [--json] [--corpus] [--config <file>]   lint a skill directory or corpus root
-  test <path> [--json] [--run]        run harness checks; --run executes LLM stages
+  test <path> [--json] [--run]        run harness checks; --run executes LLM stages (--triggers adds trigger accuracy)
 
 flags: --help, --version`
 

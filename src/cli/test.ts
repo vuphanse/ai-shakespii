@@ -6,7 +6,7 @@ import { parseSkill } from '../lib/parser'
 import { jsonTestReport } from './format/test-json'
 import { formatTestPretty } from './format/test-pretty'
 
-const USAGE = 'usage: shakespii test <path> [--json] [--run] [--fresh] [--model <name>]'
+const USAGE = 'usage: shakespii test <path> [--json] [--run] [--fresh] [--model <name>] [--triggers]'
 
 export interface RunTestDeps {
   runner?: ClaudeRunner
@@ -17,6 +17,7 @@ export async function runTest(argv: string[], deps: RunTestDeps = {}): Promise<n
   let json = false
   let run = false
   let fresh = false
+  let triggers = false
   let model: string | undefined
   const positionals: string[] = []
   for (let i = 0; i < argv.length; i++) {
@@ -27,6 +28,8 @@ export async function runTest(argv: string[], deps: RunTestDeps = {}): Promise<n
       run = true
     } else if (a === '--fresh') {
       fresh = true
+    } else if (a === '--triggers') {
+      triggers = true
     } else if (a === '--model') {
       const v = argv[i + 1]
       if (v === undefined || v.startsWith('-')) {
@@ -50,6 +53,10 @@ export async function runTest(argv: string[], deps: RunTestDeps = {}): Promise<n
     console.error(`--model requires --run\n${USAGE}`)
     return 2
   }
+  if (triggers && !run) {
+    console.error(`--triggers requires --run\n${USAGE}`)
+    return 2
+  }
   if (positionals.length !== 1) {
     console.error(USAGE)
     return 2
@@ -71,7 +78,7 @@ export async function runTest(argv: string[], deps: RunTestDeps = {}): Promise<n
   }
   try {
     const skill = parseSkill(dir)
-    const result = await testSkill(skill, { run, fresh, model, runner: deps.runner, cacheRoot: deps.cacheRoot })
+    const result = await testSkill(skill, { run, fresh, model, triggers, runner: deps.runner, cacheRoot: deps.cacheRoot })
     console.log(json ? JSON.stringify(jsonTestReport(result), null, 2) : formatTestPretty(result))
     return result.summary.errors > 0 ? 1 : 0
   } catch (e) {

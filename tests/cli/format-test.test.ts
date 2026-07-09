@@ -99,3 +99,88 @@ test('pretty: singular pluralization in the executed summary', () => {
   const out = formatTestPretty(result(0, 0, [], llm))
   expect(out).toContain('scenario: 1/1 run ok (0 cached) · grading: 1/1 expectation passed')
 })
+
+const resultWithTrigger: TestResult = {
+  skill: { dir: '/abs/demo-skill', name: 'demo-skill' },
+  stages: [
+    { stage: 'deterministic', status: 'pass', findings: [] },
+    { stage: 'scenario', status: 'pass', findings: [], runs: [{ evalId: 1, cached: false, status: 'ok', durationSeconds: 1 }] },
+    { stage: 'grading', status: 'pass', findings: [], expectations: { passed: 1, total: 1 } },
+    {
+      stage: 'trigger',
+      status: 'pass',
+      findings: [],
+      queries: { passed: 18, total: 20 },
+      runs: [
+        { queryIndex: 0, shouldTrigger: true, triggered: 3, reps: 3, cached: 5, status: 'ok' },
+        { queryIndex: 1, shouldTrigger: false, triggered: 0, reps: 3, cached: 4, status: 'ok' },
+        { queryIndex: 2, shouldTrigger: true, triggered: 2, reps: 3, cached: 3, status: 'ok' },
+      ],
+    },
+  ],
+  summary: { errors: 0, warnings: 0 },
+}
+
+const resultWithOneQueryTrigger: TestResult = {
+  skill: { dir: '/abs/demo-skill', name: 'demo-skill' },
+  stages: [
+    { stage: 'deterministic', status: 'pass', findings: [] },
+    { stage: 'scenario', status: 'pass', findings: [], runs: [{ evalId: 1, cached: false, status: 'ok', durationSeconds: 1 }] },
+    { stage: 'grading', status: 'pass', findings: [], expectations: { passed: 1, total: 1 } },
+    {
+      stage: 'trigger',
+      status: 'pass',
+      findings: [],
+      queries: { passed: 1, total: 1 },
+      runs: [{ queryIndex: 0, shouldTrigger: true, triggered: 3, reps: 3, cached: 0, status: 'ok' }],
+    },
+  ],
+  summary: { errors: 0, warnings: 0 },
+}
+
+const resultDeterministicFailedWithTrigger: TestResult = {
+  skill: { dir: '/abs/demo-skill', name: 'demo-skill' },
+  stages: [
+    { stage: 'deterministic', status: 'fail', findings: [{ severity: 'error', message: 'boom', file: 'evals/evals.json', line: null }] },
+    { stage: 'scenario', status: 'skipped', note: 'deterministic stage failed' },
+    { stage: 'grading', status: 'skipped', note: 'deterministic stage failed' },
+    { stage: 'trigger', status: 'skipped', note: 'deterministic stage failed' },
+  ],
+  summary: { errors: 1, warnings: 0 },
+}
+
+test('trigger stage JSON key order and runs entry key order', () => {
+  const rep = jsonTestReport(resultWithTrigger)
+  const stage = rep.stages[3] as Record<string, unknown>
+  expect(Object.keys(stage)).toEqual(['stage', 'status', 'findings', 'queries', 'runs'])
+  expect(Object.keys((stage.runs as unknown[])[0] as Record<string, unknown>)).toEqual([
+    'queryIndex', 'shouldTrigger', 'triggered', 'reps', 'cached', 'status',
+  ])
+  expect(Object.keys(stage.queries as Record<string, unknown>)).toEqual(['passed', 'total'])
+})
+
+test('pretty trigger tail: pluralization and cached count', () => {
+  const out = formatTestPretty(resultWithTrigger)
+  expect(out).toContain(' · trigger: 18/20 queries accurate (12 cached)')
+  const single = formatTestPretty(resultWithOneQueryTrigger)
+  expect(single).toContain(' · trigger: 1/1 query accurate (0 cached)')
+})
+
+test('pretty skip variant extends to trigger when the stage is present', () => {
+  const out = formatTestPretty(resultDeterministicFailedWithTrigger)
+  expect(out).toContain('scenario/grading/trigger skipped (deterministic stage failed)')
+})
+
+test('pretty output without a trigger stage is byte-identical to the M4b-1 formatter (frozen surface)', () => {
+  const out = formatTestPretty(result(0, 0, [], executed()))
+  expect(out).toBe(
+    'demo-skill\n' +
+      '  deterministic  PASS\n' +
+      '  scenario       FAIL\n' +
+      '    error  evals/evals.json  eval 1: executor timeout — timed out after 300000ms\n' +
+      '  grading        FAIL\n' +
+      '    error  evals/evals.json  eval 3 expectation failed: "x" — no evidence\n' +
+      '\n' +
+      'deterministic: 0 errors, 0 warnings · scenario: 2/3 runs ok (1 cached) · grading: 5/6 expectations passed',
+  )
+})

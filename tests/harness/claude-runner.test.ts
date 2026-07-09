@@ -6,6 +6,8 @@ import {
   ClaudeUnavailableError,
   DEFAULT_MODEL,
   RUN_TIMEOUT_MS,
+  SETTLE_OUTER_BOUND_MS,
+  settleWithGrace,
   spawnClaudeRunner,
 } from '../../src/lib/harness/claude-runner'
 
@@ -135,4 +137,30 @@ test('non-detect requests carry no triggered field (frozen surface)', async () =
   const bin = stub(`echo '{"type":"result","result":"done"}'`)
   const res = await spawnClaudeRunner(bin).run({ prompt: 'x', cwd: dir, model: 'sonnet', timeoutMs: 10_000 })
   expect('triggered' in res).toBe(false)
+})
+
+test('SETTLE_OUTER_BOUND_MS is pinned', () => {
+  expect(SETTLE_OUTER_BOUND_MS).toBe(10_000)
+})
+
+test('settleWithGrace: settled work returns its value inside the bound', async () => {
+  const reader = { cancel: async () => {} }
+  expect(await settleWithGrace(Promise.resolve('ok'), reader, 'fallback')).toBe('ok')
+})
+
+test('settleWithGrace: grace path — work settles after cancel unblocks it', async () => {
+  let resolveWork: (v: string) => void = () => {}
+  const work = new Promise<string>(r => { resolveWork = r })
+  let cancelled = false
+  const reader = { cancel: async () => { cancelled = true; resolveWork('drained') } }
+  expect(await settleWithGrace(work, reader, 'fallback', 5, 1_000)).toBe('drained')
+  expect(cancelled).toBe(true)
+})
+
+test('settleWithGrace: outer bound — hung work + hung cancel returns fallback, no hang', async () => {
+  const neverWork = new Promise<string>(() => {})
+  const hungReader = { cancel: () => new Promise<void>(() => {}) }
+  const started = performance.now()
+  expect(await settleWithGrace(neverWork, hungReader, 'fallback', 5, 30)).toBe('fallback')
+  expect(performance.now() - started).toBeLessThan(1_000)
 })

@@ -35,6 +35,50 @@ const round2 = (n: number): number => Math.round(n * 100) / 100
 
 const CLAUDE_UNAVAILABLE_MESSAGE = 'claude CLI not found — install Claude Code or put claude on PATH'
 
+const DRAIN_GRACE_MS = 2000
+export const SETTLE_OUTER_BOUND_MS = 10_000
+
+// Once the process has exited, its pipe write-ends are already closed, so a
+// pending read should settle almost immediately with `done: true`. Observed
+// empirically: after a detached process group has been SIGKILLed more than
+// once within the same Bun runtime, the stdout/stderr ReadableStream readers
+// can fail to report that EOF and hang indefinitely. Bound the wait and
+// force-cancel to unblock; if even the cancel hangs, the outer bound returns
+// the fallback rather than hanging the run (spec §8).
+export async function settleWithGrace<T>(
+  work: Promise<T>,
+  reader: { cancel(): Promise<void> },
+  fallback: T,
+  graceMs = DRAIN_GRACE_MS,
+  outerBoundMs = SETTLE_OUTER_BOUND_MS,
+): Promise<T> {
+  const sequence = async (): Promise<T> => {
+    let settled = false
+    work.then(
+      () => {
+        settled = true
+      },
+      () => {
+        settled = true
+      },
+    )
+    await Promise.race([work.then(() => {}, () => {}), Bun.sleep(graceMs)])
+    if (!settled) {
+      try {
+        await reader.cancel()
+      } catch {
+        // reader may already be closed
+      }
+    }
+    try {
+      return await work
+    } catch {
+      return fallback
+    }
+  }
+  return Promise.race([sequence(), Bun.sleep(outerBoundMs).then(() => fallback)])
+}
+
 export function spawnClaudeRunner(claudeBin = 'claude'): ClaudeRunner {
   return {
     async run(req: RunnerRequest): Promise<RunnerResult> {
@@ -85,41 +129,6 @@ export function spawnClaudeRunner(claudeBin = 'claude'): ClaudeRunner {
         if (detector !== null && !earlyKilled && detector.feed(event)) {
           earlyKilled = true
           killGroup()
-        }
-      }
-      // Once the process has exited, its pipe write-ends are already closed,
-      // so a pending read should settle almost immediately with `done: true`.
-      // Observed empirically: after a detached process group has been
-      // SIGKILLed more than once within the same Bun runtime, the stdout/
-      // stderr ReadableStream readers can fail to report that EOF and hang
-      // indefinitely. Bound the wait and force-cancel to unblock rather than
-      // hang the run.
-      const DRAIN_GRACE_MS = 2000
-      const settleWithGrace = async <T>(work: Promise<T>, reader: ReadableStreamDefaultReader<Uint8Array>, fallback: T): Promise<T> => {
-        let settled = false
-        work.then(
-          () => {
-            settled = true
-          },
-          () => {
-            settled = true
-          },
-        )
-        await Promise.race([
-          work.then(() => {}, () => {}),
-          Bun.sleep(DRAIN_GRACE_MS),
-        ])
-        if (!settled) {
-          try {
-            await reader.cancel()
-          } catch {
-            // reader may already be closed
-          }
-        }
-        try {
-          return await work
-        } catch {
-          return fallback
         }
       }
       let stderr: string

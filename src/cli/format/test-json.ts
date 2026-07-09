@@ -27,6 +27,22 @@ export function jsonTestReport(result: TestResult): TestJsonReport {
       if (s.stage === 'grading') {
         return { stage: s.stage, status: s.status, findings, expectations: { passed: s.expectations.passed, total: s.expectations.total } }
       }
+      if (s.stage === 'trigger') {
+        return {
+          stage: s.stage,
+          status: s.status,
+          findings,
+          queries: { passed: s.queries.passed, total: s.queries.total },
+          runs: s.runs.map(r => ({
+            queryIndex: r.queryIndex,
+            shouldTrigger: r.shouldTrigger,
+            triggered: r.triggered,
+            reps: r.reps,
+            cached: r.cached,
+            status: r.status,
+          })),
+        }
+      }
       return { stage: s.stage, status: s.status, findings }
     }),
     summary: result.summary,

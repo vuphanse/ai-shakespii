@@ -10,6 +10,7 @@ import {
   runDir,
   runKey,
   skillContentHash,
+  triggerKey,
 } from '../../src/lib/harness/run-dir'
 
 const SKILL_MD = ['---', 'name: hash-me', 'description: "Use when hashing."', '---', '# hash-me', '', 'Body.'].join('\n')
@@ -61,6 +62,18 @@ test('runKey: 16 hex chars, distinct per eval id, model, and schema version inpu
   expect(runKey({ skillHash: 'a'.repeat(64), evalId: 2, model: 'claude-sonnet-5' })).not.toBe(key)
   expect(runKey({ skillHash: 'a'.repeat(64), evalId: 1, model: 'claude-haiku-4-5' })).not.toBe(key)
   expect(HARNESS_SCHEMA_VERSION).toBe(1)
+})
+
+test('triggerKey: 16 hex chars, distinct per query, rep, and model input', () => {
+  const key = triggerKey({ skillHash: 'a'.repeat(64), query: 'Query one.', rep: 1, model: 'claude-sonnet-5' })
+  expect(key).toMatch(/^[0-9a-f]{16}$/)
+  expect(triggerKey({ skillHash: 'a'.repeat(64), query: 'Query two.', rep: 1, model: 'claude-sonnet-5' })).not.toBe(key)
+  expect(triggerKey({ skillHash: 'a'.repeat(64), query: 'Query one.', rep: 2, model: 'claude-sonnet-5' })).not.toBe(key)
+  expect(triggerKey({ skillHash: 'a'.repeat(64), query: 'Query one.', rep: 1, model: 'claude-haiku-4-5' })).not.toBe(key)
+  expect(triggerKey({ skillHash: 'b'.repeat(64), query: 'Query one.', rep: 1, model: 'claude-sonnet-5' })).not.toBe(key)
+  // structurally distinct from runKey (trigger segment + hashed query), so a trigger
+  // run never collides with a scenario run's cache entry even with matching inputs.
+  expect(key).not.toBe(runKey({ skillHash: 'a'.repeat(64), evalId: 1, model: 'claude-sonnet-5' }))
 })
 
 test('runDir layout and ensureRunDir creation', () => {

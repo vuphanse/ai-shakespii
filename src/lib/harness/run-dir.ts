@@ -38,6 +38,15 @@ export function runKey(input: { skillHash: string; evalId: number; model: string
     .slice(0, 16)
 }
 
+const sha256hex = (s: string): string => createHash('sha256').update(s).digest('hex')
+
+export function triggerKey(input: { skillHash: string; query: string; rep: number; model: string }): string {
+  return createHash('sha256')
+    .update(`${HARNESS_SCHEMA_VERSION}\n${input.skillHash}\ntrigger\n${sha256hex(input.query)}\n${input.rep}\n${input.model}`)
+    .digest('hex')
+    .slice(0, 16)
+}
+
 const SAFE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
 export function runDir(root: string, skillName: string, key: string): string {

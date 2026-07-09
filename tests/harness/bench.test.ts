@@ -1,13 +1,12 @@
 import { expect, test } from 'bun:test'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { EvalsJson, GradingJson } from '../../src/lib/evals/types'
 import { validateBenchmarkJson } from '../../src/lib/evals/validate'
 import { BENCH_DEFAULT_RUNS, deltaPassRate, deltaTime, deltaTokens, deriveBenchResult, runBenchSuite } from '../../src/lib/harness/bench'
 import { benchKey, runDir, skillContentHash } from '../../src/lib/harness/run-dir'
 import { parseSkill } from '../../src/lib/parser'
-import { completed, fakeRunner, failed, gradingReply, resultEvent } from './helpers'
+import { completed, fakeRunner, failed, gradingReply, makeBenchSkillDir, resultEvent } from './helpers'
 import type { FakeScript } from './helpers'
 
 const CONFIGS = ['with_skill', 'without_skill'] as const
@@ -35,11 +34,8 @@ const GOLDEN_EVALS: EvalsJson = {
 }
 
 function makeSkill(evalsDoc: EvalsJson): { skill: ReturnType<typeof parseSkill>; cacheRoot: string } {
-  const dir = mkdtempSync(join(tmpdir(), 'shakespii-bench-skill-'))
-  writeFileSync(join(dir, 'SKILL.md'), '---\nname: demo-skill\ndescription: Use when testing bench pipeline plumbing.\nversion: 1.0.0\n---\n\n# Demo\n')
-  mkdirSync(join(dir, 'evals'), { recursive: true })
-  writeFileSync(join(dir, 'evals/evals.json'), JSON.stringify(evalsDoc))
-  return { skill: parseSkill(dir), cacheRoot: mkdtempSync(join(tmpdir(), 'shakespii-bench-cache-')) }
+  const { dir, cacheRoot } = makeBenchSkillDir(evalsDoc)
+  return { skill: parseSkill(dir), cacheRoot }
 }
 
 /** Every sample in the matrix passes every expectation — used where the pass pattern itself is not under test. */

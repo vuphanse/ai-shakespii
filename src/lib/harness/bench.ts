@@ -135,7 +135,7 @@ async function runLiveSample(
   })
   if ('failure' in graded) return { ok: false, message: failMessage(graded.failure) }
   const result = deriveBenchResult(graded.grading)
-  if (result === null) return { ok: false, message: failMessage('internal: grading document missing derivable metrics') }
+  if (result === null) throw new Error(failMessage('internal: grading document missing derivable metrics'))
   return { ok: true, result, events: attempt.result.events }
 }
 

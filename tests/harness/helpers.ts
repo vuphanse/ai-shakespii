@@ -1,4 +1,8 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { ClaudeRunner, RunnerRequest, RunnerResult } from '../../src/lib/harness/claude-runner'
+import type { EvalsJson } from '../../src/lib/evals/types'
 
 export type FakeScript = Array<RunnerResult | ((req: RunnerRequest) => RunnerResult)>
 
@@ -68,3 +72,12 @@ export const gradingReply = (expectations: Array<{ text: string; passed: boolean
     null,
     2,
   )
+
+/** On-disk demo-skill fixture shared by the bench pipeline and bench CLI tests. */
+export function makeBenchSkillDir(evalsDoc: EvalsJson, prefix = 'shakespii-bench-skill-'): { dir: string; cacheRoot: string } {
+  const dir = mkdtempSync(join(tmpdir(), prefix))
+  writeFileSync(join(dir, 'SKILL.md'), '---\nname: demo-skill\ndescription: Use when testing bench pipeline plumbing.\nversion: 1.0.0\n---\n\n# Demo\n')
+  mkdirSync(join(dir, 'evals'), { recursive: true })
+  writeFileSync(join(dir, 'evals/evals.json'), JSON.stringify(evalsDoc))
+  return { dir, cacheRoot: mkdtempSync(join(tmpdir(), 'shakespii-bench-cache-')) }
+}

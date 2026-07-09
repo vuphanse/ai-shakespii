@@ -1,10 +1,10 @@
 import { expect, spyOn, test } from 'bun:test'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runBench } from '../../src/cli/bench'
 import type { EvalsJson } from '../../src/lib/evals/types'
-import { completed, fakeRunner, failed, gradingReply, resultEvent } from '../harness/helpers'
+import { completed, fakeRunner, failed, gradingReply, makeBenchSkillDir, resultEvent } from '../harness/helpers'
 import type { FakeScript } from '../harness/helpers'
 
 const CLI = join(import.meta.dir, '../../src/cli/index.ts')
@@ -68,11 +68,8 @@ const executorOk = () => completed('did the task')
 const graderOk = () => completed(gradingReply([{ text: 'ok', passed: true }]))
 
 function makeSkillDir(): { skillDir: string; cacheRoot: string } {
-  const dir = mkdtempSync(join(tmpdir(), 'shakespii-bench-cli-skill-'))
-  writeFileSync(join(dir, 'SKILL.md'), '---\nname: demo-skill\ndescription: Use when testing bench CLI plumbing.\nversion: 1.0.0\n---\n\n# Demo\n')
-  mkdirSync(join(dir, 'evals'), { recursive: true })
-  writeFileSync(join(dir, 'evals/evals.json'), JSON.stringify(EVALS))
-  return { skillDir: dir, cacheRoot: mkdtempSync(join(tmpdir(), 'shakespii-bench-cli-cache-')) }
+  const { dir, cacheRoot } = makeBenchSkillDir(EVALS, 'shakespii-bench-cli-skill-')
+  return { skillDir: dir, cacheRoot }
 }
 
 /** Every eval/config/run-1 sample passes — used where the pass pattern itself is not under test. */
@@ -122,6 +119,7 @@ test('run failure with --json: single-line {"error": ...}, exit 1', async () => 
   try {
     const code = await runBench([skillDir, '--json', '--runs', '1'], { runner: failingRunner2, cacheRoot })
     expect(code).toBe(1)
+    expect(log.mock.calls).toHaveLength(1)
     expect(log.mock.calls[0][0]).toBe(JSON.stringify({ error: 'bench run failed (eval 1, with_skill, run 1): executor timeout — hung again' }))
   } finally {
     log.mockRestore()
@@ -157,6 +155,18 @@ test('contamination with --json: warnings on stderr, stdout document byte-pure',
     ])
   } finally {
     log.mockRestore()
+    err.mockRestore()
+  }
+})
+
+test('deterministic gate: injected runner is never called', async () => {
+  const runner = fakeRunner([])
+  const err = spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    const code = await runBench([join(FIXTURES, 'bad-evals')], { runner, cacheRoot: mkdtempSync(join(tmpdir(), 'shakespii-bench-gate-')) })
+    expect(code).toBe(2)
+    expect(runner.requests).toHaveLength(0)
+  } finally {
     err.mockRestore()
   }
 })

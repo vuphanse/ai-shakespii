@@ -94,7 +94,7 @@ its body range. Both require `--corpus`; both count once in summaries.
 | ID | Severity | Rule | Evidence |
 |---|---|---|---|
 | TR01 | warn | Skill ships `evals/evals.json` with ≥3 cases (skill-creator schema), fixtures resolving relative to the skill dir | Anthropic "minimum three evaluations"; compress's fixtures break because they don't resolve relative to the skill |
-| TR02 | warn | Trigger-accuracy eval: ≥16 labeled queries incl. near-miss negatives, pass threshold on held-out split | skill-creator's ready-made design (60/40 split, 3 reps, select by test score) |
+| TR02 | warn | Trigger-accuracy query set present and well-formed: `evals/triggers.json` with ≥16 labeled queries including near-miss negatives (options `{ minQueries: 16 }`). Measured accuracy runs under `shakespii test --run --triggers` (skill-creator run_eval.py defaults: 3 reps/query, trigger threshold 0.5 = majority rule, accuracy threshold 0.8) | skill-creator `run_eval.py` + adjudication 2026-07-09 (measure-only — the earlier "pass threshold on held-out split" wording described the retired optimizer design; description optimization moves to the M5 writer) |
 
 ## Seed set for MVP
 

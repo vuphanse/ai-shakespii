@@ -71,3 +71,10 @@ test('runDir layout and ensureRunDir creation', () => {
   expect(ensureRunDir(root, 'demo', 'deadbeefdeadbeef')).toBe(dir)
   expect(existsSync(dir)).toBe(true)
 })
+
+test('runDir throws on separator-bearing or dot-only skill names (defense in depth)', () => {
+  for (const bad of ['a/b', 'a\\b', '.', '..', '../x']) {
+    expect(() => runDir('/tmp/root', bad, 'k'.repeat(16))).toThrow('internal: unsafe skill name for run dir')
+  }
+  expect(() => runDir('/tmp/root', 'my.skill_v2-beta', 'k'.repeat(16))).not.toThrow()
+})

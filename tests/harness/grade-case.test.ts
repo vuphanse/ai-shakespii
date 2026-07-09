@@ -120,5 +120,45 @@ test('grader duration sums across retry calls', async () => {
     executor_duration_seconds: 12.34,
     grader_duration_seconds: 5,
     total_duration_seconds: 17.34,
+    grader_retries: 1,
+    grader_retry_causes: ['gate: invalid grading (reply is not valid JSON)'],
   })
+})
+
+test('grader retry observability: gate retry stamps grader_retries and grader_retry_causes', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-grade-obs-'))
+  const good = gradingReply([
+    { text: 'first expectation', passed: true },
+    { text: 'second expectation', passed: true },
+  ])
+  const runner = fakeRunner([completed('garbage'), completed(good)])
+  const res = await gradeCase(args(runner, dir))
+  if (!('grading' in res)) throw new Error('expected success')
+  expect(res.grading.timing?.grader_retries).toBe(1)
+  expect(res.grading.timing?.grader_retry_causes).toEqual(['gate: invalid grading (reply is not valid JSON)'])
+  expect(JSON.parse(readFileSync(join(dir, 'timing.json'), 'utf8')).grader_retries).toBe(1)
+})
+
+test('grader retry observability: runner-failure retry records a runner cause', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-grade-obs-runner-'))
+  const good = gradingReply([
+    { text: 'first expectation', passed: true },
+    { text: 'second expectation', passed: true },
+  ])
+  const runner = fakeRunner([failed('timeout', 'slow'), completed(good)])
+  const res = await gradeCase(args(runner, dir))
+  if (!('grading' in res)) throw new Error('expected success')
+  expect(res.grading.timing?.grader_retry_causes).toEqual(['runner: grader timeout — slow'])
+})
+
+test('grader retry observability: absent on first-try success', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-grade-obs-clean-'))
+  const good = gradingReply([
+    { text: 'first expectation', passed: true },
+    { text: 'second expectation', passed: true },
+  ])
+  const res = await gradeCase(args(fakeRunner([completed(good)]), dir))
+  if (!('grading' in res)) throw new Error('expected success')
+  expect(res.grading.timing !== undefined && 'grader_retries' in res.grading.timing).toBe(false)
+  expect(res.grading.timing !== undefined && 'grader_retry_causes' in res.grading.timing).toBe(false)
 })

@@ -38,7 +38,12 @@ export function runKey(input: { skillHash: string; evalId: number; model: string
     .slice(0, 16)
 }
 
+const SAFE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+
 export function runDir(root: string, skillName: string, key: string): string {
+  // Defense in depth: the deterministic stage already rejects unsafe names
+  // before any run dir is composed; this guard is never expected to fire.
+  if (!SAFE_SEGMENT.test(skillName)) throw new Error(`internal: unsafe skill name for run dir ("${skillName}")`)
   return join(root, 'runs', skillName, key)
 }
 

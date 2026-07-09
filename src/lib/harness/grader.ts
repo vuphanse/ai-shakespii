@@ -150,7 +150,10 @@ export async function gradeCase(args: {
   }
 
   let attempt = await call(original)
+  let retryCause: string | null = null
   if (attempt.kind !== 'ok') {
+    retryCause =
+      attempt.kind === 'gate' ? `gate: invalid grading (${attempt.problems[0]})` : `runner: ${attempt.failure}`
     const retryPrompt =
       attempt.kind === 'gate' ? buildGraderRetryPrompt(original, attempt.problems, attempt.reply) : original
     attempt = await call(retryPrompt)
@@ -158,10 +161,14 @@ export async function gradeCase(args: {
   if (attempt.kind === 'runner') return { failure: attempt.failure }
   if (attempt.kind === 'gate') return { failure: `grader returned invalid grading (${attempt.problems[0]})` }
 
-  const timing = {
+  const timing: Record<string, unknown> = {
     executor_duration_seconds: args.executorDurationSeconds,
     grader_duration_seconds: graderDuration,
     total_duration_seconds: round2(args.executorDurationSeconds + graderDuration),
+  }
+  if (retryCause !== null) {
+    timing.grader_retries = 1
+    timing.grader_retry_causes = [retryCause]
   }
   const merged: GradingJson = {
     expectations: attempt.doc.expectations,

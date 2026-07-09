@@ -106,6 +106,21 @@ test('case-count warning is suppressed while structural errors exist', () => {
   expect(findings.every(f => f.severity === 'error')).toBe(true)
 })
 
+test('unsafe skill_name path segments are rejected', () => {
+  for (const bad of ['../evil', 'a/b', 'a\\b', '.', '..', '-dash-start']) {
+    const skill = skillFromRaw(cleanSkillRaw(), [evalsEntry(validDoc(bad))])
+    const findings = runDeterministic(skill)
+    expect(findings.some(f => f.message === 'skill_name must be a safe path segment' && f.severity === 'error')).toBe(true)
+  }
+})
+
+test('dots, dashes, underscores inside a safe segment pass', () => {
+  const raw = ['---', 'name: my.skill_v2-beta', 'description: "Use when testing."', '---', '# x', '', 'Body.'].join('\n')
+  const skill = skillFromRaw(raw, [evalsEntry(validDoc('my.skill_v2-beta'))])
+  const findings = runDeterministic(skill)
+  expect(findings.some(f => f.message === 'skill_name must be a safe path segment')).toBe(false)
+})
+
 test('testSkill: stage pipeline shape, summary, and status transitions', async () => {
   const pass = await testSkill(skillFromRaw(cleanSkillRaw(), [evalsEntry(validDoc())]))
   expect(pass.stages).toEqual([

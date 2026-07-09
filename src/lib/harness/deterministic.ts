@@ -26,6 +26,9 @@ export function runDeterministic(skill: ParsedSkill): HarnessFinding[] {
     if (typeof doc.skill_name === 'string' && doc.skill_name.length > 0 && typeof fmName === 'string' && doc.skill_name !== fmName) {
       out.push(err(`skill_name "${doc.skill_name}" does not match frontmatter name "${fmName}"`))
     }
+    if (typeof doc.skill_name === 'string' && doc.skill_name.length > 0 && !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(doc.skill_name)) {
+      out.push(err('skill_name must be a safe path segment'))
+    }
     if (Array.isArray(doc.evals)) {
       const inventory = new Set(skill.files.map(f => f.relPath))
       doc.evals.forEach((c: unknown, i: number) => {

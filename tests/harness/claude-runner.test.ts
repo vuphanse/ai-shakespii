@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -81,4 +81,58 @@ test('unspawnable binary throws ClaudeUnavailableError with the contractual mess
     'claude CLI not found — install Claude Code or put claude on PATH',
   )
   await expect(runner.run({ prompt: 'x', cwd: tmpdir(), model: 'sonnet', timeoutMs: 1000 })).rejects.toBeInstanceOf(ClaudeUnavailableError)
+})
+
+const DETECT_LINES = [
+  '{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"tu1","name":"Skill"}}}',
+  '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\\"command\\": \\"demo-skill\\"}"}}}',
+  '{"type":"stream_event","event":{"type":"content_block_stop","index":0}}',
+].join('\n')
+
+test('detect mode adds --include-partial-messages to argv', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-detect-argv-'))
+  const argsFile = join(dir, 'args.txt')
+  const bin = stub(`printf '%s\\n' "$@" > "${argsFile}"\necho '{"type":"result","result":"done"}'`)
+  await spawnClaudeRunner(bin).run({ prompt: 'x', cwd: dir, model: 'sonnet', timeoutMs: 10_000, detect: { skillName: 'demo-skill' } })
+  const args = (await Bun.file(argsFile).text()).trim().split('\n')
+  expect(args).toEqual(['-p', 'x', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions', '--model', 'sonnet', '--include-partial-messages'])
+})
+
+test('detection fires: early process-group kill, status completed, triggered true', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-detect-kill-'))
+  const marker = join(dir, 'orphan-survived.txt')
+  const dataFile = join(dir, 'data.jsonl')
+  writeFileSync(dataFile, `${DETECT_LINES}\n`)
+  // Background child would write the marker after 2s; the group kill must reap it.
+  const bin = stub(`(sleep 2; echo late > "${marker}") &\ncat "${dataFile}"\nsleep 30`)
+  const started = performance.now()
+  const res = await spawnClaudeRunner(bin).run({ prompt: 'x', cwd: dir, model: 'sonnet', timeoutMs: 20_000, detect: { skillName: 'demo-skill' } })
+  expect(performance.now() - started).toBeLessThan(15_000)
+  expect(res.status).toBe('completed')
+  expect(res.triggered).toBe(true)
+  await Bun.sleep(2_500)
+  expect(existsSync(marker)).toBe(false)
+}, 30_000)
+
+test('clean completion without detection: triggered false', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-detect-clean-'))
+  const bin = stub(`echo '{"type":"result","result":"done"}'`)
+  const res = await spawnClaudeRunner(bin).run({ prompt: 'x', cwd: dir, model: 'sonnet', timeoutMs: 10_000, detect: { skillName: 'demo-skill' } })
+  expect(res.status).toBe('completed')
+  expect(res.triggered).toBe(false)
+})
+
+test('timeout in detect mode: status timeout, triggered absent', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-detect-timeout-'))
+  const bin = stub('sleep 30')
+  const res = await spawnClaudeRunner(bin).run({ prompt: 'x', cwd: dir, model: 'sonnet', timeoutMs: 300, detect: { skillName: 'demo-skill' } })
+  expect(res.status).toBe('timeout')
+  expect('triggered' in res).toBe(false)
+}, 10_000)
+
+test('non-detect requests carry no triggered field (frozen surface)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-detect-absent-'))
+  const bin = stub(`echo '{"type":"result","result":"done"}'`)
+  const res = await spawnClaudeRunner(bin).run({ prompt: 'x', cwd: dir, model: 'sonnet', timeoutMs: 10_000 })
+  expect('triggered' in res).toBe(false)
 })

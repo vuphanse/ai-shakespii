@@ -39,6 +39,12 @@ export const completed = (finalText: string | null, overrides: Partial<RunnerRes
   ...overrides,
 })
 
+export const detected = (triggered: boolean, overrides: Partial<RunnerResult> = {}): RunnerResult => ({
+  ...completed('(trigger probe complete)'),
+  triggered,
+  ...overrides,
+})
+
 export const failed = (status: 'timeout' | 'nonzero-exit', errorMessage: string): RunnerResult => ({
   status,
   finalText: null,

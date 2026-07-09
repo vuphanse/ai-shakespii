@@ -167,7 +167,7 @@ hits into a `warnings: string[]` returned alongside the document, not into
 `benchmark.json` itself. Pretty mode (`formatBenchPretty`) appends them as
 trailing lines; `--json` mode writes every warning to **stderr** (one
 `console.error` per warning, `src/cli/bench.ts`) before printing the
-single-line `benchmark.json` to stdout — `bench --json`'s stdout stays
+pretty-printed `benchmark.json` to stdout — `bench --json`'s stdout stays
 byte-pure (frozen surface, spec §11) no matter how many contamination
 warnings fire.
 

@@ -162,6 +162,7 @@ export async function gradeCase(args: {
   }
 
   let attempt = await call(original)
+  if (attempt.kind === 'gate') writeFileSync(join(args.dir, 'grader-fail-1.md'), attempt.reply)
   let retryCause: string | null = null
   if (attempt.kind !== 'ok') {
     retryCause =
@@ -169,6 +170,7 @@ export async function gradeCase(args: {
     const retryPrompt =
       attempt.kind === 'gate' ? buildGraderRetryPrompt(original, attempt.problems, attempt.reply) : original
     attempt = await call(retryPrompt)
+    if (attempt.kind === 'gate') writeFileSync(join(args.dir, 'grader-fail-2.md'), attempt.reply)
   }
   if (attempt.kind === 'runner') return { failure: attempt.failure }
   if (attempt.kind === 'gate') return { failure: `grader returned invalid grading (${attempt.problems[0]})` }

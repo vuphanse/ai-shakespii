@@ -162,3 +162,40 @@ test('grader retry observability: absent on first-try success', async () => {
   expect(res.grading.timing !== undefined && 'grader_retries' in res.grading.timing).toBe(false)
   expect(res.grading.timing !== undefined && 'grader_retry_causes' in res.grading.timing).toBe(false)
 })
+
+test('gate failure then success: grader-fail-1.md persists beside grading.json', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-grade-failpersist-'))
+  const runner = fakeRunner([
+    completed('utterly not json, no braces at all'),
+    completed(gradingReply([
+      { text: 'first expectation', passed: true },
+      { text: 'second expectation', passed: true },
+    ])),
+  ])
+  const res = await gradeCase(args(runner, dir))
+  expect('grading' in res).toBe(true)
+  expect(readFileSync(join(dir, 'grader-fail-1.md'), 'utf8')).toBe('utterly not json, no braces at all')
+  expect(existsSync(join(dir, 'grader-fail-2.md'))).toBe(false)
+})
+
+test('double gate failure: both fail files persist, no grading.json (uncached failure)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-grade-failpersist-double-'))
+  const runner = fakeRunner([completed('first bad reply'), completed('second bad reply')])
+  const res = await gradeCase(args(runner, dir))
+  expect('failure' in res).toBe(true)
+  expect(readFileSync(join(dir, 'grader-fail-1.md'), 'utf8')).toBe('first bad reply')
+  expect(readFileSync(join(dir, 'grader-fail-2.md'), 'utf8')).toBe('second bad reply')
+  expect(existsSync(join(dir, 'grading.json'))).toBe(false)
+})
+
+test('runner-kind failure persists no fail file; clean grading persists none', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-grade-failpersist-runner-'))
+  const runner = fakeRunner([
+    failed('timeout', 'hung'),
+    completed(gradingReply([{ text: 'first expectation', passed: true }, { text: 'second expectation', passed: true }])),
+  ])
+  const res = await gradeCase(args(runner, dir))
+  expect('grading' in res).toBe(true)
+  expect(existsSync(join(dir, 'grader-fail-1.md'))).toBe(false)
+  expect(existsSync(join(dir, 'grader-fail-2.md'))).toBe(false)
+})

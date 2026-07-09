@@ -60,13 +60,15 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 
 - [ ] Trigger-accuracy eval (TR02) per skill-creator's design (~20 labeled queries incl. near-miss negatives, threshold on held-out split)
 - [ ] Benchmark stats (`benchmark.json`, with/without skill, runs-per-eval > 1, variance)
-- [ ] Live-compress evals sync (user sign-off; attached to the personal-skill-migration decision)
+
+(Live-compress evals sync moved to M5 with the personal-skill migration — decided 2026-07-09.)
 
 ## M5 — Writer + publishing
 
 - [ ] Writer implemented as a skill (interview → draft → critique → refine loop), itself linted and tested by shakespii
 - [ ] Install gate: lint must pass before a skill lands in `~/.claude/skills/`
 - [ ] ai-cortex promotion path: recurring pattern/gotcha memories surfaced as candidate skill drafts
+- [ ] Personal-skill migration (decided 2026-07-09): run the 13 personal skills through the audit loop, collapse the 5 kickoff clones into one parameterized skill (triggers validated with TR02), and sync the repaired compress evals into the live skill (after the CALIBRATION-M4B1 eval rewordings are adjudicated). The dogfood corpus at `~/.claude/skills/` stays read-only until this lands.
 
 ## M6 — Curated library
 
@@ -82,4 +84,5 @@ Author the missing engineering skills through shakespii's own pipeline (dogfood)
 | Distribution | ~~npm package, Homebrew, plain git clone~~ | **Decided 2026-07-07: local link (`bun link`) for the MVP; npm publish graduates at M5** |
 | CLI name | `shakespii` | **Confirmed 2026-07-07** |
 | Score model | ~~Severity counts only vs 0–100 aggregate score~~ | **Decided 2026-07-08: severity counts only** — no research-backed weighting exists; revisit condition: M6 library ranking (M3a spec §0) |
-| Personal-skill migration | Whether the 13 existing personal skills get refactored through shakespii once M2 lands (incl. collapsing the 5 kickoff clones) | Big win, but touches live workflow — sequence carefully |
+| Personal-skill migration | ~~Now, after M4b-2, or at M5~~ | **Decided 2026-07-09: defer to M5** — writer + install gate are the migration tooling; the kickoff-clone collapse is validated with TR02; the live-compress evals sync travels with it (live corpus stays read-only until then) |
+| XS02 similarity threshold | ~~0.55, 0.65, keep 0.8~~ | **Decided 2026-07-09: 0.65** — forms the 4-skill kickoff cluster (all edges ≥0.6607, CALIBRATION-M3B); quick-task (best edge 0.5547) stays out; 0.55 rejected as untested corpus-wide precision risk. Implementation: standalone TDD change before M4b-2 |

@@ -5,11 +5,13 @@ import { join } from 'node:path'
 import { parseSkill } from '../../src/lib/parser'
 import {
   HARNESS_SCHEMA_VERSION,
+  benchKey,
   cacheRoot,
   ensureRunDir,
   runDir,
   runKey,
   skillContentHash,
+  suiteKey,
   triggerKey,
 } from '../../src/lib/harness/run-dir'
 
@@ -90,4 +92,21 @@ test('runDir throws on separator-bearing or dot-only skill names (defense in dep
     expect(() => runDir('/tmp/root', bad, 'k'.repeat(16))).toThrow('internal: unsafe skill name for run dir')
   }
   expect(() => runDir('/tmp/root', 'my.skill_v2-beta', 'k'.repeat(16))).not.toThrow()
+})
+
+test('benchKey: 6 segments, structurally distinct from runKey, config/run/model sensitive', () => {
+  const base = { skillHash: 'h'.repeat(64), evalId: 1, config: 'with_skill' as const, runNumber: 1, model: 'sonnet' }
+  const k = benchKey(base)
+  expect(k).toMatch(/^[0-9a-f]{16}$/)
+  expect(benchKey({ ...base, config: 'without_skill' })).not.toBe(k)
+  expect(benchKey({ ...base, runNumber: 2 })).not.toBe(k)
+  expect(benchKey({ ...base, model: 'opus' })).not.toBe(k)
+  expect(runKey({ skillHash: base.skillHash, evalId: 1, model: 'sonnet' })).not.toBe(k)
+})
+
+test('suiteKey varies by model and runs', () => {
+  const base = { skillHash: 'h'.repeat(64), model: 'sonnet', runs: 3 }
+  expect(suiteKey(base)).toMatch(/^[0-9a-f]{16}$/)
+  expect(suiteKey({ ...base, runs: 5 })).not.toBe(suiteKey(base))
+  expect(suiteKey({ ...base, model: 'opus' })).not.toBe(suiteKey(base))
 })

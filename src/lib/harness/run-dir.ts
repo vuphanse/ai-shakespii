@@ -47,6 +47,26 @@ export function triggerKey(input: { skillHash: string; query: string; rep: numbe
     .slice(0, 16)
 }
 
+export function benchKey(input: {
+  skillHash: string
+  evalId: number
+  config: 'with_skill' | 'without_skill'
+  runNumber: number
+  model: string
+}): string {
+  return createHash('sha256')
+    .update(`${HARNESS_SCHEMA_VERSION}\n${input.skillHash}\n${input.evalId}\n${input.config}\n${input.runNumber}\n${input.model}`)
+    .digest('hex')
+    .slice(0, 16)
+}
+
+export function suiteKey(input: { skillHash: string; model: string; runs: number }): string {
+  return createHash('sha256')
+    .update(`${HARNESS_SCHEMA_VERSION}\n${input.skillHash}\nbench-suite\n${input.model}\n${input.runs}`)
+    .digest('hex')
+    .slice(0, 16)
+}
+
 const SAFE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
 export function runDir(root: string, skillName: string, key: string): string {

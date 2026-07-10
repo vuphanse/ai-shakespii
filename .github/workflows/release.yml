@@ -11,6 +11,10 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      # Actions sets CI=true, which flips picocolors into color mode and breaks
+      # the formatter byte-pin tests; the suite's contract is uncolored output.
+      NO_COLOR: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

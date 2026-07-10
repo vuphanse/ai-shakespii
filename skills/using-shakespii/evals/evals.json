@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Lint my skill at ~/.claude/skills/caveman and fix what it finds.",
+      "prompt": "Lint my skill at ~/.claude/skills/caveman and fix what it finds. Apply the fixes directly — you have my approval; don't pause to ask.",
       "expected_output": "The agent runs shakespii lint with --json, fixes each finding via the remediation reference, re-lints until clean, and reports before/after finding counts.",
       "files": [],
       "expectations": [
@@ -15,14 +15,14 @@
     },
     {
       "id": 2,
-      "prompt": "Create a new skill that teaches agents to review Dockerfiles.",
-      "expected_output": "The agent confirms name, purpose, and triggers, scaffolds with shakespii init, fills every section and the evals stub, lint-loops to a clean run, and presents the result without installing it.",
+      "prompt": "Create a new skill that teaches agents to review Dockerfiles. Use the name dockerfile-review; its purpose is catching common Dockerfile mistakes; it should trigger when the user asks for a Dockerfile review or audit. You have my approval to scaffold — proceed without further questions.",
+      "expected_output": "The agent adopts the supplied name, purpose, and triggers, scaffolds with shakespii init, fills every section and the evals stub, lint-loops to a clean run, and presents the result without installing it.",
       "files": [],
       "expectations": [
-        "Confirms kebab-case name, purpose, and trigger situations before scaffolding",
+        "Adopts the supplied name, purpose, and trigger situations without stalling to re-confirm them",
         "Uses `shakespii init` rather than hand-rolling the directory layout",
         "Leaves no scaffold placeholder tokens anywhere in the new skill",
-        "Presents the skill with clean lint output and asks approval before any install"
+        "Presents the skill with clean lint output and does not install it anywhere"
       ]
     },
     {
@@ -59,11 +59,11 @@
     },
     {
       "id": 6,
-      "prompt": "Run the evals for ~/.claude/skills/compress and tell me which expectations fail.",
-      "expected_output": "The agent confirms token spend with the human, runs shakespii test with --run and --json, reads the scenario and grading findings, and reports each failed expectation with the grader's evidence — re-running from cache when nothing changed.",
+      "prompt": "Run the evals for ~/.claude/skills/compress and tell me which expectations fail. You have my approval for the token spend of --run.",
+      "expected_output": "The agent notes the pre-granted token approval, runs shakespii test with --run and --json, reads the scenario and grading findings, and reports each failed expectation with the grader's evidence — re-running from cache when nothing changed.",
       "files": [],
       "expectations": [
-        "Confirms with the human before the first token-spending --run",
+        "Proceeds with --run under the prompt's explicit token approval without stalling for further confirmation",
         "Invokes `shakespii test <dir> --run --json` rather than executing evals by hand",
         "Distinguishes scenario findings (executor failures) from grading findings (failed expectations)",
         "Reports failed expectations verbatim with the grader's evidence",

@@ -1,7 +1,7 @@
 ---
 name: using-shakespii
-description: "Use when creating a new agent skill or auditing, linting, testing, or fixing an existing one — drives the shakespii CLI (init, lint --json, test --run) to scaffold standard SKILL.md skills and resolve findings until clean."
-version: 0.5.0
+description: "Use when linting, auditing, testing, or benchmarking an agent skill — or scaffolding one with the shakespii CLI — validates standard SKILL.md skills (frontmatter, structure, evals, trigger accuracy) and fixes findings until clean, driving shakespii (init, lint --json, test --run, bench)."
+version: 0.6.0
 ---
 
 # using-shakespii
@@ -80,7 +80,9 @@ shakespii test <skill-dir> --run --json
 ```
 
 `--run` spends real tokens (one executor and one grader session per eval
-case), so confirm with the human before the first run on a suite. Results
+case), so confirm with the human before the first run on a suite (when a
+human is present to answer; in a non-interactive run, an explicit approval
+already given in the task prompt satisfies this). Results
 are cached per (skill content, eval, model): re-running after no changes
 replays instantly from cache; editing the skill or its evals re-runs only
 because the content hash changed. `--fresh` forces re-execution despite the
@@ -111,7 +113,8 @@ those first, same gate as `test`) or the `claude` CLI is unavailable.
 `--model <name>` overrides the default executor model (sonnet); `--fresh`
 bypasses the cache to force a fresh measurement. Like `--run`, `bench`
 spends real tokens per run — confirm with the human before the first run
-on a suite, and never point it at an untrusted third-party skill: both
+on a suite (or accept an approval the task prompt already grants), and
+never point it at an untrusted third-party skill: both
 `--run` and `bench` execute with `--dangerously-skip-permissions`.
 
 ### Measuring trigger accuracy
@@ -137,7 +140,8 @@ at 0.8 or above without regressing queries that already passed.
 
 Authoring branch — create a new skill:
 
-5. Confirm name, purpose, and trigger situations with the human, then run
+5. Confirm name, purpose, and trigger situations with the human (or adopt
+   them from the task prompt when it already supplies and approves them), then run
    `shakespii init <name>` in the agreed parent directory.
 6. Fill every section of the scaffold, replacing each placeholder token (the scaffold
    marks them with `TODO(shakespii)` plus a trailing colon) with real content.

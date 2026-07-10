@@ -3,7 +3,7 @@
   "queries": [
     { "query": "Lint the skill I just wrote and fix the findings", "should_trigger": true },
     { "query": "Run shakespii lint on ./skills/pdf-tools and explain the findings", "should_trigger": true },
-    { "query": "Create a new skill called changelog-writer", "should_trigger": true },
+    { "query": "Create a new skill called changelog-writer", "should_trigger": false },
     { "query": "Scaffold a skill for summarizing meeting notes and make it pass lint", "should_trigger": true },
     { "query": "Audit all my installed skills for duplication", "should_trigger": true },
     { "query": "Run the evals for my compress skill and tell me what failed", "should_trigger": true },

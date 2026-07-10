@@ -57,19 +57,19 @@ test('shakespii test passes on the weld skill', () => {
   expect(rep.stages[0]).toEqual({ stage: 'deterministic', status: 'pass', findings: [] })
 })
 
-test('triggers.json carries 20 labeled queries: 12 positive, 8 near-miss negatives', async () => {
+test('triggers.json carries 20 labeled queries: 11 positive, 9 near-miss negatives', async () => {
   const raw = await Bun.file(join(SKILL_DIR, 'evals/triggers.json')).text()
   const doc = JSON.parse(raw) as { skill_name: string; queries: Array<{ query: string; should_trigger: boolean }> }
   expect(doc.skill_name).toBe('using-shakespii')
   expect(doc.queries).toHaveLength(20)
-  expect(doc.queries.filter(q => q.should_trigger).length).toBe(12)
-  expect(doc.queries.filter(q => !q.should_trigger).length).toBe(8)
+  expect(doc.queries.filter(q => q.should_trigger).length).toBe(11)
+  expect(doc.queries.filter(q => !q.should_trigger).length).toBe(9)
   for (const q of doc.queries) expect(q.query.length).toBeGreaterThan(0)
 })
 
-test('v0.5.0 teaches the bench and trigger loops', async () => {
+test('v0.6.0 teaches the bench and trigger loops', async () => {
   const raw = await Bun.file(join(SKILL_DIR, 'SKILL.md')).text()
-  expect(raw).toContain('version: 0.5.0')
+  expect(raw).toContain('version: 0.6.0')
   expect(raw).toContain('shakespii bench')
   expect(raw).toContain('--triggers')
 })

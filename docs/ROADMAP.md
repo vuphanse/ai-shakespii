@@ -78,7 +78,7 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 - [x] Eval-5 corpus-audit prompt reworded to bound session length — adjudicated application of the CALIBRATION-M4B2 candidate, applied here by user decision rather than parked with the M5d migration (5cbde39)
 - [x] Calibration sweep (docs/CALIBRATION-M5A.md): spike evidence, predictions committed pre-sweep, bench + trigger + scenario actuals, adjudicated findings, retro-scan of the M4b-2 corpus, both cache proofs green (a396274, 6079505)
 
-Commit range: 166fcd7..6079505.
+Commit range: 166fcd7..246c054.
 
 ## M5b — Writer-as-skill
 

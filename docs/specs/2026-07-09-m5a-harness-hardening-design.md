@@ -197,7 +197,7 @@ verbatim to `<runDir>/grader-fail-<attempt>.md` (attempt ∈ {1, 2}) before the
 retry / fail-fast proceeds. Consequences: a recovered retry leaves
 `grader-fail-1.md` beside the successful `grading.json`; a double failure leaves
 both fail files and still writes no `grading.json`. Observability only — no
-behavior change.
+behavior change. An attempt that produces no reply at all (a runner-level failure) writes no fail file — persistence applies only to attempts that returned a reply which then failed extraction or gating.
 
 ## §7 Skill-detection exact-match
 

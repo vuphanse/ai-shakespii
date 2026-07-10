@@ -1,6 +1,10 @@
 # OS
 .DS_Store
 
+# Local-only docs — canonical copies live in ~/.ai-pref-nsync/local-docs/ai-shakespii/
+docs/CALIBRATION-*.md
+docs/superpowers/plans/
+
 # Editors
 .idea/
 .vscode/

@@ -17,7 +17,7 @@ See `docs/STRATEGY.md` for rationale.
 
 ## Source Of Truth
 
-- Tracked specs live in `docs/specs/`; implementation plans in `docs/superpowers/plans/`.
+- Tracked specs live in `docs/specs/`. Implementation plans (`docs/superpowers/plans/`) and calibration docs (`docs/CALIBRATION-*.md`) are **git-ignored local working copies** — kept in the repo tree for the workflow but never committed; their canonical copies live only in the ai-pref-nsync root below. Citations to `docs/CALIBRATION-*.md` inside tracked docs therefore resolve locally, not on GitHub.
 - **Dual-location rule:** canonical doc copies live in `~/.ai-pref-nsync/local-docs/ai-shakespii/` (subdirs `specs/`, `plans/`, `brainstorm/`, `knowledge-references/`; ROADMAP canonical at `plans/ROADMAP.md`). The in-repo `docs/` files are synced mirrors — update both, verify with `cp` + `cmp`. `README.md` is repo-only.
 - `docs/ROADMAP.md` lists open decisions — **they are the user's to make; never pick one silently.**
 - Lint rules cite their evidence (audit doc reference) in `docs/LINT-RULES.md` before implementation. The dogfood corpus is the user's installed skills at `~/.claude/skills/` plus the superpowers plugin — calibrate against it; synthetic fixtures are never enough.
@@ -56,7 +56,7 @@ Locked contracts — changing any of these requires an explicit user decision, n
 
 - Non-trivial features follow brainstorming → spec → plan → implement. Specs are adjudicated with the user before planning; plans carry complete code and tests per task.
 - Prefer subagent-driven execution for multi-task plans (fresh implementer per task, per-task spec + quality review, final whole-branch review), with the model allocation the plan specifies.
-- Each milestone closes with a calibration or verification pass against the real corpus/pipelines, recorded in a `docs/CALIBRATION-*.md` or release-notes doc with predictions/adjudications where applicable.
+- Each milestone closes with a calibration or verification pass against the real corpus/pipelines, recorded in a `docs/CALIBRATION-*.md` (git-ignored; canonical copy in ai-pref-nsync) or release-notes doc with predictions/adjudications where applicable.
 - Small fixes can go directly on `master`; inside an ai-whisper workflow the mounted workspace is operator-provided consent.
 
 ## Verification Rules

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "ai-shakespii",
+      "name": "shakespii",
       "dependencies": {
         "picocolors": "^1.1.1",
         "remark-parse": "^11.0.0",

@@ -102,8 +102,9 @@ with a version-scoped qualifier).
   same effective memory scope on the current CLI).
 - README/HARNESS caveats about the residual memory-file leak are updated to
   cite this document: excluded as of CLI 2.1.202, verified by paired probe;
-  re-verify after major CLI upgrades (the M5a↔M5b behavior delta shows this
-  surface can move between versions).
+  re-verify after major CLI upgrades (the delta between the M5a trace and
+  this probe shows the surface can change out from under the harness; the
+  M5a-era CLI version was not recorded, so the exact boundary is unknown).
 - The M5b calibration (CALIBRATION-M5B.md) runs on the unchanged epoch and
   should show the scenario noise class attributed to the memory file in M5a
   (ask-and-stall preambles, foreign first-action tool searches) absent.

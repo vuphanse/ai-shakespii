@@ -112,8 +112,9 @@ hermeticity spike (docs/HERMETICITY.md, claude CLI 2.1.202) found this
 leak no longer reproduces: a paired canary probe quotes the memory file
 verbatim without the flag and returns NONE with it, so the shipped argv
 now excludes the user memory file on the current CLI. No runner change
-was made and the cache epoch stayed at 2. Because this surface moved
-between CLI versions once, treat it as version-dependent: re-run the
+was made and the cache epoch stayed at 2. Because the observed behavior changed
+between the M5a trace and the M5b probe (the M5a-era CLI version was not
+recorded), treat it as version-dependent: re-run the
 HERMETICITY.md probe after major CLI upgrades before trusting
 memory-sensitive results.
 

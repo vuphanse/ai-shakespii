@@ -48,6 +48,12 @@ mechanism.
 
 ## Actuals
 
+Measurement-0 grading summaries (backing for the 6→10→8 sequence in the
+predictions table): using-shakespii measurement 0 carried 6 failed
+expectations — eval 1 (2), eval 6 (4); iteration 1 carried 10 — eval 1 (3),
+eval 4 (2), eval 6 (5); iteration 2 carried 8 — eval 1 (3), eval 6 (5),
+each from the corresponding sweep report's grading stage.
+
 Six live sweeps ran 2026-07-10 (08:06–11:45 local): both skills measured at
 their committed content, then through the sanctioned description loop (two
 iterations each). Full per-measurement records are in the description-loop
@@ -593,8 +599,13 @@ committed v0.1.0 wording (cached m0 replay, 0.80) and adjudicate the loop net-ne
    nothing jails their writes: the session located the real repo and wrote
    an audit report into `docs/`. Verified damage-free: `git status` shows
    no tracked-file modifications, and zero files under `~/.claude/skills/`
-   were modified (the read-only corpus rule held). The stray file is left
-   untracked for the operator to keep or delete. Recorded candidates for
+   were modified (the read-only corpus rule held). The session wrote the
+   same file (byte-identical, same mtime) to BOTH documentation locations —
+   repo `docs/` and the canonical
+   `~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/` — the
+   dual-location convention it could read from the repo's own project
+   instructions once it had escaped into the repo. Both copies are left in
+   place for the operator to keep or delete as a pair. Recorded candidates for
    M5c (with the install gate, where session sandboxing belongs): jail or
    sandbox executor cwd/writes, and extend the contamination scan to flag
    out-of-workspace Write/Bash file mutations from persisted events.

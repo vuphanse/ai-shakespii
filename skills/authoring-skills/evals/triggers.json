@@ -1,0 +1,25 @@
+{
+  "skill_name": "authoring-skills",
+  "queries": [
+    { "query": "Write a new skill that teaches agents to review Dockerfiles", "should_trigger": true },
+    { "query": "Create a new skill called changelog-writer", "should_trigger": true },
+    { "query": "I have an idea for a skill — help me turn it into a SKILL.md", "should_trigger": true },
+    { "query": "Turn my release-notes checklist into a reusable agent skill", "should_trigger": true },
+    { "query": "Design an agent skill that summarizes meeting transcripts", "should_trigger": true },
+    { "query": "Help me author a skill for triaging flaky CI failures", "should_trigger": true },
+    { "query": "Draft a SKILL.md for a code-review helper and interview me for the details", "should_trigger": true },
+    { "query": "Build a skill that teaches agents our deploy runbook", "should_trigger": true },
+    { "query": "I keep re-explaining our API conventions to agents — make it a skill", "should_trigger": true },
+    { "query": "Compose a new agent skill from these notes about our review process", "should_trigger": true },
+    { "query": "Write the evals and trigger set for the new skill we are creating", "should_trigger": true },
+    { "query": "Start the skill-authoring interview for a database-migration helper", "should_trigger": true },
+    { "query": "Lint the skill I just wrote and fix the findings", "should_trigger": false },
+    { "query": "Run the evals for my compress skill and tell me what failed", "should_trigger": false },
+    { "query": "Audit all my installed skills for duplication", "should_trigger": false },
+    { "query": "Benchmark my skill with and without the skill mounted", "should_trigger": false },
+    { "query": "Write a blog post explaining what agent skills are", "should_trigger": false },
+    { "query": "Create a new React component for the settings page", "should_trigger": false },
+    { "query": "Write documentation for my REST API", "should_trigger": false },
+    { "query": "Improve my prompt for the customer-support chatbot", "should_trigger": false }
+  ]
+}

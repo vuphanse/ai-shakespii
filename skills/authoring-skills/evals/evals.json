@@ -1,0 +1,49 @@
+{
+  "skill_name": "authoring-skills",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a new skill called retry-taxonomy that teaches agents to classify flaky test failures before retrying. Purpose: stop blind retries by classifying the failure first. Triggers: the user asks why CI is flaky or wants a failed run diagnosed before rerunning. Worked example you can use: input — a Jest log ending in ECONNRESET from a service call; output — classification \"infrastructure flake: retry with backoff\", not a code fix. Keep every section brief. You have my approval to scaffold and run the lint loop; proceed without questions.",
+      "expected_output": "The agent scaffolds with shakespii init, fills every section from the supplied material, works the lint loop to a clean exit, and presents the result without installing it.",
+      "files": [],
+      "expectations": [
+        "Runs shakespii init rather than hand-rolling the directory layout",
+        "Adopts the supplied name, purpose, and triggers without stalling to re-confirm them",
+        "Leaves no scaffold placeholder token in the finished files",
+        "Runs the lint fix loop until it exits clean",
+        "Does not install the skill anywhere"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I want a skill that helps agents write good commit messages, but I have not thought through the details. Run the authoring interview: ask me everything you need in one batch, since I cannot reply again this session.",
+      "expected_output": "The agent runs the interview phase only: a single batch of questions covering intent, triggers, inputs, a worked example, and failure modes, with no files written.",
+      "files": [],
+      "expectations": [
+        "Asks interview questions covering intent, trigger situations, inputs, a real worked example, and failure modes",
+        "Does not scaffold or write any skill files before requirements exist",
+        "Addresses the questions to the human rather than inventing answers"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Lint my skill at ./skills/note-taker and fix the findings.",
+      "expected_output": "The authoring loop does not engage; this is an audit of an existing skill, so the agent fixes findings without starting an interview or creating anything new.",
+      "files": [],
+      "expectations": [
+        "Does not start the authoring interview",
+        "Does not scaffold a new skill directory"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Write a blog post explaining what agent skills are and why they matter.",
+      "expected_output": "The authoring loop does not engage; the agent writes the requested prose as an ordinary writing task.",
+      "files": [],
+      "expectations": [
+        "Does not run the authoring interview or create any skill directory",
+        "Handles the request as an ordinary writing task"
+      ]
+    }
+  ]
+}

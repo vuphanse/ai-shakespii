@@ -16,7 +16,7 @@ Milestone: M5c — the full milestone: `shakespii install` gate + CI pipeline + 
 | 6 | Bundled skills | `shakespii install <name>` resolves skills bundled in the npm package (`using-shakespii`, `authoring-skills`) as well as filesystem paths. |
 | 7 | License | MIT. |
 | 8 | Providers | Install targets are provider-aware, not Claude-only. Registry ships all six well-known targets: `claude`, `codex`, `cursor`, `antigravity`, `gemini`, `agents` (the tool-agnostic `~/.agents/skills` standard). `claude` stays the default. |
-| 9 | ezio | The in-house agent gets a dedicated registry entry now: `ezio` → `~/.ezio/skills`. |
+| 9 | ezio | The in-house agent gets a dedicated registry entry now: `ezio` → `~/.config/ai-ezio/skills` (verified on this machine — the directory exists and already holds 24 skills). |
 
 Standing decision honored: distribution was decided 2026-07-07 as "local `bun link` for the MVP; npm publish graduates at M5c" (M2 spec, ROADMAP open-decisions table). This milestone is that graduation.
 
@@ -58,9 +58,9 @@ Skills produced by this tool are standard Agent Skills (non-negotiable decision 
 | `antigravity` | `~/.gemini` | `~/.gemini/config/skills` |
 | `gemini` | `~/.gemini` | `~/.gemini/skills` |
 | `agents` | `~/.agents` | `~/.agents/skills` |
-| `ezio` | `~/.ezio` | `~/.ezio/skills` |
+| `ezio` | `~/.config/ai-ezio` | `~/.config/ai-ezio/skills` |
 
-Sources for the third-party paths: Cursor docs (cursor.com/docs/skills), the Codex skills ecosystem docs, and the Antigravity/Gemini skills-location guide; `codex` additionally verified on this machine (`~/.codex/skills` exists). The implementer re-verifies each path against current provider docs at build time. Two operational notes: Cursor also reads `~/.claude/skills` and `~/.codex/skills` directly, so a `claude` install already covers Cursor; `antigravity` and `gemini` share the `~/.gemini` root but use different skills dirs.
+Sources for the third-party paths: Cursor docs (cursor.com/docs/skills), the Codex skills ecosystem docs, and the Antigravity/Gemini skills-location guide; `codex` and `ezio` additionally verified on this machine (`~/.codex/skills` and `~/.config/ai-ezio/skills` both exist). The implementer re-verifies each third-party path against current provider docs at build time. Two operational notes: Cursor also reads `~/.claude/skills` and `~/.codex/skills` directly, so a `claude` install already covers Cursor; `antigravity` and `gemini` share the `~/.gemini` root but use different skills dirs.
 
 Target selection:
 

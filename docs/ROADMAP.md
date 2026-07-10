@@ -80,13 +80,15 @@ Agent-first interface decision (docs/REFERENCE-SKILL-CRITIQUE.md): humans instru
 
 Commit range: 166fcd7..246c054.
 
-## M5b — Writer-as-skill
+## M5b — Writer-as-skill (done 2026-07-10)
 
-- [ ] Writer implemented as a skill (interview → draft → critique → refine loop), itself linted and tested by shakespii
-- [ ] Description optimization: use the M5a clean trigger-accuracy baseline (0.80, un-primed) to improve `name`/`description` trigger phrasing
-- [ ] ai-cortex promotion path: recurring pattern/gotcha memories surfaced as candidate skill drafts (writer-or-later, not yet decided — see Open decisions)
-- [ ] Full memory-file hermeticity: `--setting-sources project,local` excludes user-level skills/plugins but not `~/.claude/CLAUDE.md` (docs/CALIBRATION-M5A.md adjudication 2) — investigate a hermeticity option for scenario/trigger sessions
-- [ ] Headless-aware eval design: scenario evals whose expectations assume a human-in-the-loop ("confirm before spending", "ask clarifying questions") stall single-turn headless sessions at a confirmation prompt (docs/CALIBRATION-M5A.md adjudication 7) — either reword affected expectations for headless execution or add skill-body guidance for non-interactive contexts
+- [x] Writer implemented as a skill (interview → draft → critique → refine loop), itself linted and tested by shakespii (272602b)
+- [x] Description optimization: use the M5a clean trigger-accuracy baseline (0.80, un-primed) to improve `name`/`description` trigger phrasing — using-shakespii reached 0.90, authoring-skills reached 0.85, each after two loop iterations (docs/CALIBRATION-M5B.md) (d0ee935)
+- [x] ai-cortex promotion path: recurring pattern/gotcha memories surfaced as candidate skill drafts — **decided 2026-07-10: deferred post-dogfood** (see Open decisions)
+- [x] Full memory-file hermeticity: spike found `--setting-sources project,local` already excludes `~/.claude/CLAUDE.md` on claude CLI 2.1.202, proven with a paired positive/negative-control probe — **verdict RESOLVED-UPSTREAM**, no runner change needed, `RUN_CACHE_VERSION` stays 2 (docs/HERMETICITY.md) (a11021f)
+- [x] Headless-aware eval design: reworded the ask-and-stall scenario expectations for single-turn headless execution and carried the same headless-execution guidance into the authoring-skills skill body (4b4cb68, 272602b)
+
+Commit range: 5c5c711..d0ee935 (docs closeout follows).
 
 ## M5c — Install gate + npm publish
 
@@ -113,4 +115,4 @@ Author the missing engineering skills through shakespii's own pipeline (dogfood)
 | Score model | ~~Severity counts only vs 0–100 aggregate score~~ | **Decided 2026-07-08: severity counts only** — no research-backed weighting exists; revisit condition: M6 library ranking (M3a spec §0) |
 | Personal-skill migration | ~~Now, after M4b-2, or at M5~~ | **Decided 2026-07-09: defer to M5d** — writer + install gate are the migration tooling; the kickoff-clone collapse is validated with TR02; the live-compress evals sync travels with it (live corpus stays read-only until then) |
 | XS02 similarity threshold | ~~0.55, 0.65, keep 0.8~~ | **Decided 2026-07-09: 0.65** — forms the 4-skill kickoff cluster (all edges ≥0.6607, CALIBRATION-M3B); quick-task (best edge 0.5547) stays out; 0.55 rejected as untested corpus-wide precision risk. Implementation: standalone TDD change before M4b-2 |
-| ai-cortex promotion path | Ship with M5b writer, or later once the writer's dogfooded | **Writer-or-later, not yet decided** — recurring pattern/gotcha memories surfaced as candidate skill drafts; listed under M5b pending a decision on sequencing relative to the writer's own dogfooding |
+| ai-cortex promotion path | ~~Ship with M5b writer, or later once the writer's dogfooded~~ | **Decided 2026-07-10: deferred post-dogfood** — the writer ships without it; design the memory→skill-draft path after real authoring use (M5b spec §0.2) |

@@ -8,15 +8,19 @@ Most prompt tools focus on writing better prompts. ai-shakespii focuses on desig
 
 **M4b-1, M4b-2, and M5a shipped — the test harness is hardened.** `git clone` + `bun install` + `bun link` gives you `shakespii init`, `shakespii lint` (full single-skill rule catalog, pretty + `--json` output, plus `--corpus` for cross-skill XS01/XS02 checks and `--config` for profile overrides), `shakespii test` (scenario runs and rubric grading via `--run`, trigger accuracy via `--run --triggers`), and `shakespii bench` (pass-rate/time/token deltas with vs without the skill mounted), and `skills/using-shakespii/` teaches agents to drive them (see the install section below). M5a isolated every headless session (`--setting-sources project,local`) and added post-hoc contamination detection — see the bench caveat below. Strategy, audit evidence, and the roadmap live in `docs/`; next up is M5b (the writer, implemented as a skill itself).
 
-## Install the companion skill
+## Install the companion skills
 
 `skills/using-shakespii/` teaches agents to drive this CLI — the audit loop and the
-authoring loop. Install it by symlinking into your live skills directory:
+authoring loop. `skills/authoring-skills/` is the interview → draft → critique →
+refine writer that turns an idea into a new skill; it delegates CLI mechanics to
+using-shakespii. Install either by symlinking into your live skills directory:
 
     ln -s "$(pwd)/skills/using-shakespii" ~/.claude/skills/using-shakespii
+    ln -s "$(pwd)/skills/authoring-skills" ~/.claude/skills/authoring-skills
 
-Run it from the repo root. Uninstall by removing the link:
-`rm ~/.claude/skills/using-shakespii`. The repo copy stays the source of truth.
+Run them from the repo root. Uninstall by removing the links:
+`rm ~/.claude/skills/using-shakespii ~/.claude/skills/authoring-skills`. The repo
+copies stay the source of truth.
 
 ## What this will be
 
@@ -43,11 +47,15 @@ zero or negative). As of M5a every session is isolated
 plugins — the baseline-contamination class is mitigated — and a post-hoc
 contamination scanner flags any non-target skill invocation that still slips
 through as a `warn`-severity finding (`bench --json`'s stdout stays
-byte-pure; warnings go to stderr). What isolation does **not** exclude is
-your `~/.claude/CLAUDE.md` user memory file, which still enters every
-session and can perturb scenario/trigger behavior identically across both
-bench configurations — documented, not yet mitigated (see
-`docs/HARNESS.md` and `docs/CALIBRATION-M5A.md`).
+byte-pure; warnings go to stderr). Through M5a, isolation was known to still
+admit your `~/.claude/CLAUDE.md` user memory file into every session, able to
+perturb scenario/trigger behavior identically across both bench configurations
+(docs/CALIBRATION-M5A.md). An M5b spike re-tested this with a paired
+positive/negative-control probe and found the leak no longer reproduces on
+claude CLI 2.1.202 — `--setting-sources project,local` already excludes the
+memory file on this CLI version, with no runner change required (see
+`docs/HERMETICITY.md`). This is a version-scoped result, not a guarantee:
+re-verify after major CLI upgrades.
 
 The differentiator is **enforcement**: the ecosystem already has skill-writing guidance (superpowers `writing-skills`, Anthropic's `skill-creator`), but nothing lints skills and nothing runs their evals. Our July 2026 audit of 30 installed skills found zero versioned skills, zero working test harnesses, and large-scale copy-paste duplication — see the audit doc.
 

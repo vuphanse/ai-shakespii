@@ -83,7 +83,7 @@ Commit range: 166fcd7..246c054.
 ## M5b — Writer-as-skill (done 2026-07-10)
 
 - [x] Writer implemented as a skill (interview → draft → critique → refine loop), itself linted and tested by shakespii (272602b)
-- [x] Description optimization: use the M5a clean trigger-accuracy baseline (0.80, un-primed) to improve `name`/`description` trigger phrasing — using-shakespii reached 0.90, authoring-skills reached 0.85, each after two loop iterations (docs/CALIBRATION-M5B.md) (d0ee935)
+- [x] Description optimization: use the M5a clean trigger-accuracy baseline (0.80, un-primed) to improve `name`/`description` trigger phrasing — using-shakespii reached 0.90, authoring-skills reached 0.85, each after two loop iterations (docs/CALIBRATION-M5B.md) (df3d0cc, d0ee935)
 - [x] ai-cortex promotion path: recurring pattern/gotcha memories surfaced as candidate skill drafts — **decided 2026-07-10: deferred post-dogfood** (see Open decisions)
 - [x] Full memory-file hermeticity: spike found `--setting-sources project,local` already excludes `~/.claude/CLAUDE.md` on claude CLI 2.1.202, proven with a paired positive/negative-control probe — **verdict RESOLVED-UPSTREAM**, no runner change needed, `RUN_CACHE_VERSION` stays 2 (docs/HERMETICITY.md) (a11021f)
 - [x] Headless-aware eval design: reworded the ask-and-stall scenario expectations for single-turn headless execution and carried the same headless-execution guidance into the authoring-skills skill body (4b4cb68, 272602b)

@@ -20,7 +20,7 @@ Copied from the spec (§7) and the shipped M5a contracts. Every task's requireme
 - TDD: unpiped `bun test` and `bun run typecheck` green at every commit. No test spawns the real `claude` binary. Every cache-touching test uses a temp cacheRoot (`mkdtempSync`).
 - Dogfood corpus `~/.claude/skills/` and the superpowers plugin cache are READ-ONLY. Task 3's byte-restored canary edit to `~/.claude/CLAUDE.md` is the single sanctioned exception (spec §5.2); it never touches `~/.claude/skills/`. In-repo `skills/` is writable.
 - Never point `--run`/`--triggers`/`bench` at untrusted third-party skills (`--dangerously-skip-permissions` is in the runner argv). Both skills under test here are first-party repo content.
-- Docs are dual-location: canonical `~/.ai-pref-nsync/local-docs/ai-shakespii/` (subdirs `specs/`, `plans/`, `knowledge-references/`), repo `docs/` is the mirror; every doc task ends with `cp` + `cmp` verification.
+- Docs are dual-location: canonical `~/.ai-pref-nsync/local-docs/ai-shakespii/` (subdirs `specs/`, `plans/`, `knowledge-references/`), repo `docs/` is the mirror; every doc task ends with `cp` + `cmp` verification. The ROADMAP's canonical copy lives at `~/.ai-pref-nsync/local-docs/ai-shakespii/plans/ROADMAP.md` — every task that edits `docs/ROADMAP.md` syncs and `cmp`-verifies it. `README.md` is repo-only.
 - Commit messages, code, code comments, and all committed docs use normal prose (never caveman style).
 
 ## Model allocation
@@ -302,6 +302,7 @@ git commit -m "fix(harness): M5a review minors — cancellable settle bound, tol
 
 **Files:**
 - Modify: `docs/ROADMAP.md:81`
+- Modify: `~/.ai-pref-nsync/local-docs/ai-shakespii/plans/ROADMAP.md` (same edit, canonical)
 - Modify: `docs/specs/2026-07-09-m5a-harness-hardening-design.md` (§6.2)
 - Modify: `~/.ai-pref-nsync/local-docs/ai-shakespii/specs/2026-07-09-m5a-harness-hardening-design.md` (same edit, canonical)
 
@@ -323,6 +324,11 @@ Commit range: 166fcd7..246c054.
 ```
 
 (The old tail predates the M5a docs-closeout commits; `246c054` is the milestone's true last commit and already exists, so the line no longer understates the range and cannot self-reference.)
+
+Sync the canonical ROADMAP and verify:
+
+Run: `cp docs/ROADMAP.md ~/.ai-pref-nsync/local-docs/ai-shakespii/plans/ROADMAP.md && cmp docs/ROADMAP.md ~/.ai-pref-nsync/local-docs/ai-shakespii/plans/ROADMAP.md && echo ROADMAP-MIRROR-OK`
+Expected: `ROADMAP-MIRROR-OK`
 
 - [ ] **Step 2: Clarify the §6.2 no-reply wording (both spec copies)**
 
@@ -395,9 +401,18 @@ cd "$SPIKE/ws" && CLAUDE_CONFIG_DIR="$SPIKE/config" claude -p "Say hello." --out
 
 Record exactly which files were copied into the scratch config dir. Assert ALL FOUR controls (spec §5.2): negative (no `M5B-CANARY-XK41` anywhere in events; no `~/.claude/` memory path in the init event), positive (Step 3 already proved probe sensitivity), mount (init `skills` still lists `compress`), auth (a `result` event with a successful subtype — no auth/login error). Any failure ⇒ Candidate A rejected; record why and proceed to Step 5.
 
-- [ ] **Step 5: Candidate B/C — only if Candidate A failed**
+- [ ] **Step 5: Candidate B — explicit `--settings <file>` (only if Candidate A failed)**
 
-B: inspect `claude --help` and the settings JSON schema for any switch that scopes memory/CLAUDE.md loading (e.g. a `--settings <file>` override); test the most promising switch with the same four controls and the same probe commands. C: if nothing exists, the spike is REJECTED. Record the `--help` output section scanned and the candidate outputs verbatim.
+```bash
+printf '{}\n' > "$SPIKE/settings.json"
+cd "$SPIKE/ws" && claude -p "Say hello." --output-format stream-json --verbose --dangerously-skip-permissions --model sonnet --setting-sources project,local --settings "$SPIKE/settings.json" > "$SPIKE/candidate-b.jsonl" 2>"$SPIKE/candidate-b.err"
+```
+
+Assert the same four controls as Step 4 (negative: no canary token, no `~/.claude/` memory path in the init event; positive: Step 3's sensitivity proof; mount: `compress` in the init `skills`; auth: successful result subtype). Record the events verbatim. Green ⇒ stop, verdict `GREEN(--settings)`. Any control failure ⇒ Candidate B rejected with the failing control named; proceed to Step 5b.
+
+- [ ] **Step 5b: Candidate C — CLI surface scan (only if Candidates A and B both failed)**
+
+Save `claude --help` output to `$SPIKE/help.txt` and scan it (plus the settings JSON schema, if the CLI documents one) for any switch that scopes memory/CLAUDE.md loading. If a candidate switch exists, test it with the same probe commands and the same four controls, recording the events verbatim as `candidate-c.jsonl`. If no such switch exists, record the scanned `--help` output as the evidence that the surface has no memory-scoping option. The spike's verdict is REJECTED only after Candidates A, B, and C have each either failed their controls or been shown not to exist — never before; stop at the first green candidate in A → B → C order (spec §5.1).
 
 - [ ] **Step 6: Restore the memory file (ALWAYS, even on failure or interrupt)**
 
@@ -463,12 +478,22 @@ test('prepareHermeticConfigDir: memoized per (home, scratchParent) — same dir 
   const scratch = mkdtempSync(join(tmpdir(), 'shakespii-scratch-'))
   expect(prepareHermeticConfigDir(home, scratch)).toBe(prepareHermeticConfigDir(home, scratch))
 })
+
+test('spawnClaudeRunner passes the hermetic CLAUDE_CONFIG_DIR to the child process', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-runner-hermetic-'))
+  const bin = stub(`printf '{"type":"result","result":"%s"}\\n' "$CLAUDE_CONFIG_DIR"`)
+  const res = await spawnClaudeRunner(bin).run({ prompt: 'x', cwd: dir, model: 'sonnet', timeoutMs: 10_000 })
+  expect(res.finalText).toBe(prepareHermeticConfigDir())
+  expect(res.finalText).not.toBe('')
+})
 ```
 
-(Extend the test file's `node:fs` import with whichever of `mkdirSync`, `writeFileSync`, `readFileSync`, `existsSync`, `mkdtempSync` it does not already import, plus `tmpdir` from `node:os` and `join` from `node:path` if absent.)
+The last test uses the file's existing `stub()` helper and pins the contract the reviewer's regression scenario targets: exporting the helper and bumping the epoch while forgetting to wire the env would leave `$CLAUDE_CONFIG_DIR` empty (or inherited) in the child and fail this test at the spawn layer. `prepareHermeticConfigDir()` is memoized per process, so the test's call returns the same directory the runner used.
+
+(Extend the test file's `node:fs` import with whichever of `mkdirSync`, `writeFileSync`, `readFileSync`, `existsSync`, `mkdtempSync` it does not already import, plus `tmpdir` from `node:os` and `join` from `node:path` if absent, and add `prepareHermeticConfigDir` to the claude-runner import list.)
 
 Run: `bun test tests/harness/claude-runner.test.ts`
-Expected: FAIL — `prepareHermeticConfigDir` is not exported.
+Expected: FAIL — `prepareHermeticConfigDir` is not exported (all four new tests are RED).
 
 - [ ] **Step 2: Implement**
 
@@ -503,7 +528,7 @@ delete env.CLAUDECODE
 env.CLAUDE_CONFIG_DIR = prepareHermeticConfigDir()
 ```
 
-Run: `bun test tests/harness/claude-runner.test.ts` → PASS.
+Run: `bun test tests/harness/claude-runner.test.ts` → PASS (all four new tests, including the spawn-layer env-injection pin).
 
 - [ ] **Step 3: Write the failing epoch tests**
 
@@ -1224,7 +1249,7 @@ Gates: scenario + grading stages exit-0 clean (the reworded evals pass); trigger
 bun src/cli/index.ts test skills/authoring-skills --run --triggers --json
 ```
 
-Gates: scenario suite exit 0 (fix skill content per grader evidence if an expectation fails, re-run — record each fix); trigger accuracy ≥ 0.8 via the same description loop. Watch eval 1's duration against the 300 s budget; if it times out, tighten the eval-1 prompt's brevity instruction, record the change as an adjudicated eval edit, and re-run.
+Gates: scenario suite exit 0; trigger accuracy ≥ 0.8 via the same description loop. On a failed expectation, split by locus: a defect in the SKILL's own content is fixed in the skill body (the writer's refine loop — spec §9 sanctions skill/description iterations, each recorded) and the suite re-run; a defect in the eval itself (a wrong expectation, a timeout-inducing prompt — watch eval 1 against the 300 s budget) is recorded verbatim and adjudicated in CALIBRATION-M5B.md with the candidate rewording RECORDED for the next phase, never applied mid-sweep (spec §9; M5a precedent). If an adjudicated eval-authoring defect leaves the suite red, the calibration closes honestly with that finding — do not edit `evals/evals.json` to force exit 0.
 
 - [ ] **Step 3: Contamination check**
 
@@ -1278,7 +1303,14 @@ Only if Task 4 landed: update the runner section with the hermetic mechanism exa
 
 - [ ] **Step 4: Mirrors, gates, commit**
 
-`cp` + `cmp` every touched doc that has a canonical copy (ROADMAP and README are repo-only; HARNESS.md and CALIBRATION-M5B.md live in `knowledge-references/`). Run `bun test` → PASS and `bun run typecheck` → exit 0.
+`cp` + `cmp` every touched doc that has a canonical copy: the ROADMAP's canonical copy is `~/.ai-pref-nsync/local-docs/ai-shakespii/plans/ROADMAP.md`; HARNESS.md and CALIBRATION-M5B.md live in `knowledge-references/`; README.md is repo-only.
+
+```bash
+cp docs/ROADMAP.md ~/.ai-pref-nsync/local-docs/ai-shakespii/plans/ROADMAP.md
+cmp docs/ROADMAP.md ~/.ai-pref-nsync/local-docs/ai-shakespii/plans/ROADMAP.md && echo ROADMAP-MIRROR-OK
+```
+
+Run `bun test` → PASS and `bun run typecheck` → exit 0.
 
 ```bash
 git add docs/ROADMAP.md README.md docs/HARNESS.md

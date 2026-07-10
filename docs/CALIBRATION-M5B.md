@@ -658,7 +658,402 @@ holding the 0.8 gate); zero contamination warnings; zero grader retries.
 
 ### Remediation actuals
 
-(Recorded after the re-sweeps.)
+Four re-sweeps ran 2026-07-10 (14:45–18:05 local), two rounds per skill;
+rounds 1 exposed residual eval-authoring defects that rounds 2 fixed (each
+fix committed pre-sweep: 9d8e1ad staged the notes fixture and reworded the
+evidence expectation; c09ff41 accepted file delivery for the blog post).
+
+**using-shakespii round 1 (commit 55609be)** — exit 1; scenario pass 6/6;
+grading 3 errors: eval 4 stalled asking about a ./notes directory the
+workspace never contained (an eval-authoring defect against headless rule
+2), and eval 6's "quotes verbatim" wording failed an otherwise correct
+report that named the failing expectation with its evidence. Trigger
+19/20 = 0.95.
+
+**using-shakespii round 2 (commit 9d8e1ad) — GATE GREEN**:
+
+summary {"errors": 0, "warnings": 0}; deterministic/scenario/grading all pass, zero findings.
+Trigger stage object (verbatim):
+```json
+{
+  "stage": "trigger",
+  "status": "pass",
+  "findings": [],
+  "queries": {
+    "passed": 16,
+    "total": 20
+  },
+  "runs": [
+    {
+      "queryIndex": 0,
+      "shouldTrigger": true,
+      "triggered": 1,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 1,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 2,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 3,
+      "shouldTrigger": true,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 4,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 5,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 6,
+      "shouldTrigger": true,
+      "triggered": 2,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 7,
+      "shouldTrigger": true,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 8,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 9,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 10,
+      "shouldTrigger": true,
+      "triggered": 1,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 11,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 12,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 13,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 14,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 15,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 16,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 17,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 18,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 19,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    }
+  ]
+}
+```
+Failed queries (all under-firing positives): [(0, True, 1), (3, True, 0), (7, True, 0), (10, True, 1)].
+
+**authoring-skills round 1 (commit 55609be)** — exit 1; scenario pass 4/4
+(eval 1 completed in 124 s with the CLI-path hint — no timeout); grading 1
+error: eval 4's agent wrote the requested blog post to a file and said so,
+but the expectation demanded it in the final message — delivery-channel
+over-specification (headless rule 1 counts a written file as observable).
+Trigger 16/20 = 0.80 (gate met). One contamination warning, the milestone's
+first: the corpus-audit negative (query 14 rep 1) invoked the Skill tool
+with skill "using-shakespii" (2 invocations) — adjudicated benign: the
+session correctly declined the non-owned intent (the query stayed
+untriggered for authoring-skills) and attempted to route to the owning
+neighbor by name; the scanner reported exactly what it should.
+
+**authoring-skills round 2 (commit c09ff41) — GATE GREEN**:
+
+summary {"errors": 0, "warnings": 0}; deterministic/scenario/grading all pass, zero findings, zero contamination.
+Trigger stage object (verbatim):
+```json
+{
+  "stage": "trigger",
+  "status": "pass",
+  "findings": [],
+  "queries": {
+    "passed": 19,
+    "total": 20
+  },
+  "runs": [
+    {
+      "queryIndex": 0,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 1,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 2,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 3,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 4,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 5,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 6,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 7,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 8,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 9,
+      "shouldTrigger": true,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 10,
+      "shouldTrigger": true,
+      "triggered": 2,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 11,
+      "shouldTrigger": true,
+      "triggered": 3,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 12,
+      "shouldTrigger": false,
+      "triggered": 1,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 13,
+      "shouldTrigger": false,
+      "triggered": 1,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 14,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 15,
+      "shouldTrigger": false,
+      "triggered": 1,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 16,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 17,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 18,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    },
+    {
+      "queryIndex": 19,
+      "shouldTrigger": false,
+      "triggered": 0,
+      "reps": 3,
+      "cached": 0,
+      "status": "ok"
+    }
+  ]
+}
+```
+Failed queries: [(9, True, 0)] — the persistent q9 compose-from-notes weak positive only.
+
+**Trigger variance note (honesty):** with wording unchanged since the
+description loop closed, using-shakespii measured 0.90, 0.95, then 0.80
+across three consecutive fresh sweeps, and authoring-skills measured 0.85,
+0.80, then 0.95 — rep-level majority-threshold noise of roughly ±0.10 to
+±0.15 around these sets. Single-sweep accuracies near the 0.8 gate should
+be read with that band in mind; both skills' final sweeps hold the gate,
+and the grading gates are variance-free (exit 0 on every expectation).
+
+**Remediation-round predictions vs actuals:** both suites exit 0 — HELD
+(after one additional eval-fix round per skill, disclosed above); trigger
+accuracies within one flake of the loop finals — HELD for authoring-skills
+(0.95), at the band's edge for using-shakespii (0.80, gate met); zero
+contamination — MISSED by one adjudicated-benign warning (query 14 round 1);
+zero grader retries — HELD (no grader-fail files all day).
 
 ## Cache proofs
 

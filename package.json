@@ -1,6 +1,6 @@
 {
   "name": "shakespii",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Workbench for AI agent skills — init, lint, test, bench, and gate-checked install of standard SKILL.md skills",
   "license": "MIT",
   "type": "module",

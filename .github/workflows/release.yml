@@ -55,4 +55,6 @@ jobs:
       # to this step and publish once with a granular automation token, then
       # remove the env and configure the trusted publisher.
       - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public

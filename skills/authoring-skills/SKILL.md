@@ -1,6 +1,6 @@
 ---
 name: authoring-skills
-description: "Use when the user asks to create, write, or design a new agent skill from an idea, requirement, or repeated workflow — runs an interview → draft → critique → refine loop on the shakespii toolchain, producing a skill that lints clean and passes its scenario and trigger evals."
+description: "Use when the user asks to create, write, compose, or design a new agent skill — turning an idea, notes, requirement, or repeated workflow into a SKILL.md with eval cases and a trigger set through an interview → draft → critique → refine loop."
 version: 0.1.0
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: using-shakespii
-description: "Use when linting, auditing, testing, or benchmarking an agent skill — or scaffolding one with the shakespii CLI — validates standard SKILL.md skills (frontmatter, structure, evals, trigger accuracy) and fixes findings until clean, driving shakespii (init, lint --json, test --run, bench)."
+description: "Use when the user asks to lint, audit, test, benchmark, validate, or fix an agent skill — from a single SKILL.md frontmatter check to trigger-accuracy measurement or a corpus-wide audit of installed skills for duplication — driving the shakespii CLI (init, lint --json, test --run, bench) to resolve findings until clean."
 version: 0.6.0
 ---
 

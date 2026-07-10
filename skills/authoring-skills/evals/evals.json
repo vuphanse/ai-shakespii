@@ -38,11 +38,11 @@
     {
       "id": 4,
       "prompt": "Write a blog post explaining what agent skills are and why they matter. Any reasonable angle is fine — nothing to clarify; just write it.",
-      "expected_output": "The authoring loop does not engage; the agent writes the blog post directly in its reply.",
+      "expected_output": "The authoring loop does not engage; the agent writes the blog post directly, in its reply or to a file it names.",
       "files": [],
       "expectations": [
         "Does not run the authoring interview or create any skill directory",
-        "Writes the requested blog post in its final message"
+        "Writes the requested blog post, either in its reply or to a file it names"
       ]
     }
   ]

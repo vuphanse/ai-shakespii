@@ -1,28 +1,35 @@
 # ai-shakespii
 
+[![CI](https://github.com/vuphanse/ai-shakespii/actions/workflows/ci.yml/badge.svg)](https://github.com/vuphanse/ai-shakespii/actions/workflows/ci.yml) [![npm](https://img.shields.io/npm/v/shakespii)](https://www.npmjs.com/package/shakespii)
+
 Local-first workbench for crafting reusable AI agent skills — treating skills like software components: single responsibility, explicit contracts, versioned, linted, and tested.
 
 Most prompt tools focus on writing better prompts. ai-shakespii focuses on designing better **capabilities**. If software engineering has APIs, libraries, and modules, AI-assisted engineering should have skills with the same level of discipline.
 
 ## Status
 
-**M4b-1 through M5b shipped — the harness is hardened and the writer skill exists.** `git clone` + `bun install` + `bun link` gives you `shakespii init`, `shakespii lint` (full single-skill rule catalog, pretty + `--json` output, plus `--corpus` for cross-skill XS01/XS02 checks and `--config` for profile overrides), `shakespii test` (scenario runs and rubric grading via `--run`, trigger accuracy via `--run --triggers`), and `shakespii bench` (pass-rate/time/token deltas with vs without the skill mounted), and `skills/using-shakespii/` teaches agents to drive them (see the install section below). M5a isolated every headless session (`--setting-sources project,local`) and added post-hoc contamination detection — see the bench caveat below. Strategy, audit evidence, and the roadmap live in `docs/`; M5b added `skills/authoring-skills/` (the writer, implemented as a skill itself); next up is dogfooding the writer, then M5c (install gate + npm publish).
+**M5c shipped — `shakespii` is on npm.** `bun add -g shakespii` (or `npm i -g shakespii`; the CLI runs on Bun, so Bun must be on PATH) gives you `shakespii init`, `shakespii lint` (full single-skill rule catalog, pretty + `--json` output, `--corpus` for cross-skill XS01/XS02 checks, `--config` for profile overrides), `shakespii test` (scenario runs and rubric grading via `--run`, trigger accuracy via `--run --triggers`), `shakespii bench` (pass-rate/time/token deltas with vs without the skill mounted), and `shakespii install` (gate-checked install into any well-known agent skills directory — claude, codex, cursor, antigravity, gemini, the tool-agnostic `~/.agents/skills`, or ezio). Lint errors block an install; warnings advise; cross-skill duplication against the target corpus is reported as advisory. `skills/using-shakespii/` teaches agents to drive all of it, and `skills/authoring-skills/` is the interview → draft → critique → refine writer. Strategy, audit evidence, and the roadmap live in `docs/`; next up is dogfooding the writer, then M5d (personal-skill migration).
 
-## Install the companion skills
+## Install
 
-`skills/using-shakespii/` teaches agents to drive this CLI — the audit loop and the
-authoring loop. `skills/authoring-skills/` is the interview → draft → critique →
-refine writer that turns an idea into a new skill; it delegates CLI mechanics to
-using-shakespii. Install either by symlinking into your live skills directory:
+    bun add -g shakespii    # or: npm i -g shakespii — either way Bun must be on PATH
 
-    ln -s "$(pwd)/skills/using-shakespii" ~/.claude/skills/using-shakespii
-    ln -s "$(pwd)/skills/authoring-skills" ~/.claude/skills/authoring-skills
+Then onboard the companion skills through the gate:
 
-Run them from the repo root. Uninstall by removing the links:
-`rm ~/.claude/skills/using-shakespii ~/.claude/skills/authoring-skills`. The repo
-copies stay the source of truth.
+    shakespii install using-shakespii
+    shakespii install authoring-skills
 
-## What this will be
+`using-shakespii` teaches agents to drive this CLI — the audit, testing,
+bench, trigger, and install loops. `authoring-skills` turns an idea into a
+new skill through an interview → draft → critique → refine loop, delegating
+CLI mechanics to using-shakespii. The default install target is
+`~/.claude/skills`; add `--provider codex|cursor|antigravity|gemini|agents|ezio`
+(repeatable, or `--provider all`) for other agents, `--target <dir>` for
+anywhere else, and `--force` to replace an existing copy. Working on this
+repo itself? Symlinks still work for live-editing:
+`ln -s "$(pwd)/skills/using-shakespii" ~/.claude/skills/using-shakespii`.
+
+## What it does
 
 A CLI (`shakespii`) that operates on standard Agent Skills (`SKILL.md` format):
 
@@ -32,7 +39,11 @@ A CLI (`shakespii`) that operates on standard Agent Skills (`SKILL.md` format):
   applies profile overrides
 - `shakespii test <path> [--json] [--run] [--fresh] [--model <name>] [--triggers]` — static checks on a skill's eval suite for free; `--run` executes the evals headlessly and LLM-grades every expectation, cached per (skill content, eval, model); `--triggers` (requires `--run`) additionally measures trigger accuracy against `evals/triggers.json`
 - `shakespii bench <path> [--json] [--runs <n>] [--model <name>] [--fresh]` — benchmark a skill with vs without the skill mounted, producing `benchmark.json` with pass-rate/time/token deltas over `--runs` (default 3) repetitions per configuration
-- Writer and publishing workflows come later (see roadmap)
+- `shakespii install <path-or-name> [--provider <name>]... [--target <dir>] [--force] [--json]` —
+  gate-checked install: lint errors and deterministic eval failures block, warnings
+  advise, cross-skill duplication (XS rules) against the target corpus is reported
+  per target as advisory; resolves bundled skill names (`using-shakespii`,
+  `authoring-skills`) as well as paths
 
 **Bench caveat.** `shakespii test --run`, `--triggers`, and `bench` all spawn
 headless `claude` sessions with `--dangerously-skip-permissions` inside a

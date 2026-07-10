@@ -1,7 +1,7 @@
 # M5c release notes — v0.3.0
 
 Date: 2026-07-10
-Status: **release-ready; publish blocked on npm credential.** Everything up to the tag is done and pushed: code complete (9 task commits + 1 CI fix), CI green on ubuntu-latest, repo public, v0.3.0 release commit staged with the token publish path wired. The tag is the one remaining action and it is deliberately unheld until a credential exists.
+Status: **published.** `shakespii@0.3.0` is live on npm (token bootstrap path, release run green on the re-fired tag at 271220c) and the onboarding verification passed end to end on the development machine — see "Publish execution" below. The resume runbook that follows is preserved as the historical record of the credential escalation; steps 1–5 are executed, step 6 (switch to trusted publishing) and step 7 are done or folded into the roadmap.
 
 ## Resume runbook (one-time setup, then one command)
 
@@ -20,6 +20,14 @@ Status: **release-ready; publish blocked on npm credential.** Everything up to t
    ```
 6. After the first publish exists: configure a GitHub Actions trusted publisher for `shakespii` on npmjs.com (repository `vuphanse/ai-shakespii`, workflow `release.yml`), then the `NODE_AUTH_TOKEN` env line in the Publish step can be removed and the token revoked — OIDC takes over for every later release.
 7. Check off the ROADMAP M5c publish item.
+
+## Publish execution (2026-07-10, post-escalation)
+
+- Operator set the `NPM_TOKEN` granular automation secret; controller fired `git tag v0.3.0 && git push origin v0.3.0`.
+- **Release run 1 (tag at 59c6740): failure.** The workflow's `npm install -g npm@latest` step corrupted the hosted runner's own npm tree — `libnpmpublish` could no longer resolve its `sigstore` dependency, and since `publish.js` requires `provenance.js` unconditionally, every publish died with `MODULE_NOT_FOUND` regardless of provenance settings. Tag rolled back cleanly (nothing published), upgrade step removed with an inline comment pointing the future OIDC migration at a newer bundled-npm node version instead of self-upgrading in place (271220c).
+- **Release run 2 (tag at 271220c): success.** Gates → version guard → `npm publish --access public` with `NODE_AUTH_TOKEN`; `npm view shakespii version` → `0.3.0`.
+- **Onboarding verification (spec §8 acceptance 5): all green.** `bun add -g shakespii` resolves the published package (`~/.bun/bin/shakespii` → `install/global/node_modules/shakespii/src/cli/index.ts`); `shakespii --version` → 0.3.0; `shakespii install using-shakespii --force` gate-passed (lint 0/0, deterministic pass, advisory `[]` = ran clean against the live corpus) and replaced the dev symlink with the published copy, now `version: 0.7.0` in `~/.claude/skills`; `shakespii install authoring-skills` landed in `~/.claude/skills`; `shakespii install authoring-skills --provider codex` landed in `~/.codex/skills`; `shakespii lint ~/.claude/skills/using-shakespii` exited 0 from the installed CLI — templates and profile resolve from the tarball layout.
+- Follow-up now unlocked: configure the GitHub Actions trusted publisher for `shakespii` on npmjs.com and revoke the bootstrap token; the `NODE_AUTH_TOKEN` env line comes out at the same time.
 
 ## Publish-auth path (spec §4 record)
 

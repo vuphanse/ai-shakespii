@@ -90,14 +90,14 @@ Commit range: 166fcd7..246c054.
 
 Commit range: 5c5c711..d0ee935 (docs closeout follows).
 
-## M5c — Install gate + npm publish (code complete 2026-07-10; publish pending credential)
+## M5c — Install gate + npm publish (done 2026-07-10)
 
 - [x] Install gate: `shakespii install <path-or-name>` — lint errors + deterministic eval failures block, warnings advise, per-target XS duplication advisory (three-valued contract), 7-provider registry (claude default, codex, cursor, antigravity, gemini, agents, ezio), `--force` staged swap, INSTALL_REPORT v1 (30ee457..5295625)
 - [x] using-shakespii v0.7.0 teaches the install loop, description byte-frozen at the M5b-measured wording (00561a7)
 - [x] CI + release pipelines: `ci.yml` gates (typecheck, hermetic suite, self-lint, deterministic eval checks, tarball guard) green on ubuntu-latest after the NO_COLOR fix (a7694c1, fa7650b, 1a23420); repo public; MIT; package renamed `shakespii` (dda62e3..30ee457)
-- [ ] npm publish graduation — **release-ready, blocked on npm credential**: v0.3.0 staged (d853873), tag withheld; resume = set `NPM_TOKEN` secret, then `git tag v0.3.0 && git push origin v0.3.0` (see docs/RELEASE-M5C.md)
+- [x] npm publish graduation — **`shakespii@0.3.0` live on npm 2026-07-10** (token bootstrap path; first release-run failure from an npm self-upgrade corrupting the runner's npm tree, fixed by dropping the upgrade step, 271220c). Onboarding verified end to end: global install from the registry, gate-installs of both bundled skills into `~/.claude/skills` (using-shakespii v0.7.0 replacing the dev symlink) plus a codex-provider install, and the installed CLI linting the live copy clean from the tarball layout (docs/RELEASE-M5C.md)
 
-Commit range: dda62e3..d853873 (specs/plan + 9 task commits + CI fix + release staging).
+Commit range: dda62e3..271220c (specs/plan + 9 task commits + 2 CI fixes + release staging + closeout). M5c heading status: **done 2026-07-10**.
 
 ## M5d — Personal-skill migration
 

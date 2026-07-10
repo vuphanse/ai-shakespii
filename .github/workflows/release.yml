@@ -45,8 +45,12 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - name: Upgrade npm (trusted publishing needs a current client)
-        run: npm install -g npm@latest
+      # No npm self-upgrade here: `npm install -g npm@latest` over the runner's
+      # own npm tree corrupted it on the first live run (libnpmpublish lost its
+      # sigstore dep → MODULE_NOT_FOUND at publish). The bundled npm handles the
+      # token publish fine. When this workflow moves to OIDC trusted publishing
+      # (needs npm >= 11.5), bump setup-node's node-version to one that bundles
+      # it instead of self-upgrading in place.
       # Default path: npm trusted publishing via GitHub OIDC — no token secret.
       # Bootstrap fallback if the package name cannot carry a trusted publisher
       # before its first publish: add

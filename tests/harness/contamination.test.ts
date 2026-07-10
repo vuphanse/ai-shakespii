@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { contaminationMessage, readPersistedEvents, scanContamination } from '../../src/lib/harness/contamination'
@@ -67,4 +67,23 @@ test('readPersistedEvents: parses events.jsonl, skips unparseable lines, [] when
   const events = readPersistedEvents(dir)
   expect(events).toHaveLength(2)
   expect(scanContamination(events, [])).toEqual([{ skill: 'compress', count: 1 }])
+})
+
+test('readPersistedEvents: unreadable events.jsonl (a directory) yields [] instead of throwing', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-contamination-'))
+  mkdirSync(join(dir, 'events.jsonl'))
+  expect(readPersistedEvents(dir)).toEqual([])
+})
+
+test('two Skill blocks in one assistant message count 2', () => {
+  const event = {
+    type: 'assistant',
+    message: {
+      content: [
+        { type: 'tool_use', name: 'Skill', input: { skill: 'compress' } },
+        { type: 'tool_use', name: 'Skill', input: { skill: 'compress' } },
+      ],
+    },
+  }
+  expect(scanContamination([event], [])).toEqual([{ skill: 'compress', count: 2 }])
 })

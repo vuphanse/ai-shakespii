@@ -164,3 +164,19 @@ test('settleWithGrace: outer bound — hung work + hung cancel returns fallback,
   expect(await settleWithGrace(neverWork, hungReader, 'fallback', 5, 30)).toBe('fallback')
   expect(performance.now() - started).toBeLessThan(1_000)
 })
+
+test('settleWithGrace: outer-bound timer is cleared once the sequence settles', async () => {
+  const cleared: unknown[] = []
+  const origClear = globalThis.clearTimeout
+  globalThis.clearTimeout = ((handle: Parameters<typeof clearTimeout>[0]) => {
+    cleared.push(handle)
+    return origClear(handle)
+  }) as typeof clearTimeout
+  try {
+    const reader = { cancel: async () => {} }
+    await settleWithGrace(Promise.resolve('ok'), reader, 'fallback', 5, 60_000)
+  } finally {
+    globalThis.clearTimeout = origClear
+  }
+  expect(cleared.length).toBe(1)
+})

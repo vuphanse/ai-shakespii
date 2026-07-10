@@ -163,13 +163,10 @@ const contaminatedExecutor = () =>
     ],
   })
 
-// Shared skill + cacheRoot across the next two tests: the second test asserts that a
-// cached replay recomputes contamination from the events.jsonl this test persists.
-const contamFixture = freshSkillAndCache()
-
 test('scenario contamination: warn finding with contractual message, status stays pass', async () => {
+  const { skill, cacheRoot } = freshSkillAndCache()
   const runner = fakeRunner([contaminatedExecutor(), graderOkAllPass()])
-  const { scenario, grading } = await runLlmStages(contamFixture.skill, opts(runner, contamFixture.cacheRoot))
+  const { scenario, grading } = await runLlmStages(skill, opts(runner, cacheRoot))
   expect(scenario.status).toBe('pass')
   expect(grading.status).toBe('pass')
   const warns = scenario.findings.filter(f => f.severity === 'warn')
@@ -179,8 +176,11 @@ test('scenario contamination: warn finding with contractual message, status stay
 })
 
 test('scenario contamination recomputes from persisted events.jsonl on cached replay', async () => {
+  const { skill, cacheRoot } = freshSkillAndCache()
+  await runLlmStages(skill, opts(fakeRunner([contaminatedExecutor(), graderOkAllPass()]), cacheRoot))
   const replayRunner = fakeRunner([])
-  const { scenario } = await runLlmStages(contamFixture.skill, opts(replayRunner, contamFixture.cacheRoot))
+  const { scenario } = await runLlmStages(skill, opts(replayRunner, cacheRoot))
+  expect(replayRunner.requests).toHaveLength(0)
   expect(scenario.runs[0].cached).toBe(true)
   expect(scenario.findings.some(f => f.message.startsWith('contamination:'))).toBe(true)
 })

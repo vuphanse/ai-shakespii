@@ -182,16 +182,13 @@ test('artifacts: trigger.json key order pinned; failed reps cache nothing', asyn
   expect(doc.status).toBe('ok')
 })
 
-// Shared skill + cacheRoot across the next two tests: the second test asserts that a
-// cached replay recomputes contamination from the events.jsonl this test persists.
-const contamFixture = makeSkill(queries([{ t: true }]))
-
 test('trigger contamination: warn finding with query/rep context, stage still passes', async () => {
+  const { skill, cacheRoot } = makeSkill(queries([{ t: true }]))
   const contaminatedDetected = detected(true, {
     events: [{ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'compress' } }] } }],
   })
   const runner = fakeRunner([contaminatedDetected, detected(true), detected(true)])
-  const report = await runTriggerStage(contamFixture.skill, opts(runner, contamFixture.cacheRoot))
+  const report = await runTriggerStage(skill, opts(runner, cacheRoot))
   expect(report.status).toBe('pass')
   expect(report.queries).toEqual({ passed: 1, total: 1 })
   expect(report.findings).toEqual([
@@ -200,7 +197,12 @@ test('trigger contamination: warn finding with query/rep context, stage still pa
 })
 
 test('trigger contamination recomputes from disk on cached reps (empty-script runner)', async () => {
-  const replay = await runTriggerStage(contamFixture.skill, opts(fakeRunner([]), contamFixture.cacheRoot))
+  const { skill, cacheRoot } = makeSkill(queries([{ t: true }]))
+  const contaminatedDetected = detected(true, {
+    events: [{ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'compress' } }] } }],
+  })
+  await runTriggerStage(skill, opts(fakeRunner([contaminatedDetected, detected(true), detected(true)]), cacheRoot))
+  const replay = await runTriggerStage(skill, opts(fakeRunner([]), cacheRoot))
   expect(replay.runs[0].cached).toBe(TRIGGER_REPS)
   expect(replay.findings.filter(f => f.severity === 'warn')).toHaveLength(1)
 })

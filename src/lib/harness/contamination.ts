@@ -40,8 +40,15 @@ export function contaminationMessage(hit: ContaminationHit, context: string): st
 export function readPersistedEvents(dir: string): unknown[] {
   const p = join(dir, 'events.jsonl')
   if (!existsSync(p)) return []
+  let raw: string
+  try {
+    raw = readFileSync(p, 'utf8')
+  } catch {
+    // unreadable events.jsonl (permissions, directory-shaped): nothing to scan
+    return []
+  }
   const events: unknown[] = []
-  for (const line of readFileSync(p, 'utf8').split('\n')) {
+  for (const line of raw.split('\n')) {
     const t = line.trim()
     if (!t) continue
     try {

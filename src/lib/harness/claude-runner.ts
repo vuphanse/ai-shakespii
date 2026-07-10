@@ -76,7 +76,15 @@ export async function settleWithGrace<T>(
       return fallback
     }
   }
-  return Promise.race([sequence(), Bun.sleep(outerBoundMs).then(() => fallback)])
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const bound = new Promise<T>(resolve => {
+    timer = setTimeout(() => resolve(fallback), outerBoundMs)
+  })
+  try {
+    return await Promise.race([sequence(), bound])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export function spawnClaudeRunner(claudeBin = 'claude'): ClaudeRunner {

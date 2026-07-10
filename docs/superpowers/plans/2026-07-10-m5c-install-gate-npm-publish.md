@@ -449,8 +449,8 @@ remains installable (spec adjudication 5)."
 - Consumes: `decideGate`/`GateVerdict` (Task 3), `resolveProvider` (Task 2), and existing exports: `parseSkill` from `src/lib/parser`, `runRules` from `src/lib/engine`, `loadProfile` from `src/lib/profile/load`, `runDeterministic` from `src/lib/harness/deterministic`, `defaultProfilePath`/`packageRoot` from `src/cli/paths`, `cleanSkillRaw` test helper from `tests/helpers/skill`.
 - Produces:
   - `function runInstall(argv: string[]): number` (sync) in `src/cli/install.ts` — Task 5 extends this file.
-  - `interface TargetOutcome { provider: string | null; path: string; advisory: CorpusFinding[]; installed: boolean; forced: boolean; reason: string | null }` and `installJsonReport(...)` in `src/cli/format/install-json.ts`.
-  - In this task every `advisory` array is `[]`; Task 5 adds the computation.
+  - `interface TargetOutcome { provider: string | null; path: string; advisory: CorpusFinding[] | null; installed: boolean; forced: boolean; reason: string | null }` and `installJsonReport(...)` in `src/cli/format/install-json.ts`. `advisory` is three-valued by contract (spec §2.2's "the report says so"): a findings array when the advisory ran (`[]` = ran clean), `null` when it was skipped — no corpus to compare against, or the gate blocked before it could run.
+  - In this task every `advisory` is `null` (the computation lands in Task 5); the pretty formatter already prints the skip note.
 
 **Behavior being built (spec §2.1–§2.4, single target):** resolve source (path wins over bundled name) → lint + deterministic gate → resolve one target (default `claude` via registry, or `--target <dir>`) → occupancy check (`lstat`, symlink never followed) → staged copy + swap under `--force` → INSTALL_REPORT v1 on `--json`. Exit 0 installed / 1 blocked / 2 usage.
 
@@ -508,6 +508,7 @@ test('clean skill installs to the default claude target under $HOME, exit 0', ()
   expect(rep.targets[0].provider).toBe('claude')
   expect(rep.targets[0].path).toBe(join(home, '.claude/skills/test-skill'))
   expect(rep.targets[0].installed).toBe(true)
+  expect(rep.targets[0].advisory).toBeNull() // fresh corpus: advisory skipped, reported as null
   expect(existsSync(join(home, '.claude/skills/test-skill/SKILL.md'))).toBe(true)
 })
 
@@ -536,6 +537,7 @@ test('lint error blocks: exit 1, nothing written, findings in report', () => {
   expect(rep.gate.lint.findings.some((f: { ruleId: string }) => f.ruleId === 'FM04')).toBe(true)
   expect(rep.targets[0].installed).toBe(false)
   expect(rep.targets[0].reason).toBe('gate: lint errors')
+  expect(rep.targets[0].advisory).toBeNull() // gate blocked before the advisory step
   expect(existsSync(join(home, '.claude/skills/test-skill'))).toBe(false)
 })
 
@@ -701,7 +703,8 @@ import type { CorpusFinding, Finding } from '../../lib/types'
 export interface TargetOutcome {
   provider: string | null
   path: string
-  advisory: CorpusFinding[]
+  /** XS findings naming the candidate; [] = advisory ran clean; null = advisory skipped (no corpus to compare against, or gate blocked before it ran). */
+  advisory: CorpusFinding[] | null
   installed: boolean
   forced: boolean
   reason: string | null
@@ -788,7 +791,14 @@ export function formatInstallPretty(report: InstallJsonReport): string {
     } else {
       lines.push(pc.red(`blocked ${label}: ${t.reason}`))
     }
-    for (const a of t.advisory) lines.push(pc.yellow(`  advisory ${a.ruleId}: ${a.message}`))
+    if (t.advisory === null) {
+      // Spec §2.2: a skipped advisory must be reported, not silently omitted.
+      if (t.reason === null || !t.reason.startsWith('gate:')) {
+        lines.push(pc.dim('  advisory: skipped (no installed skills at this target to compare against)'))
+      }
+    } else {
+      for (const a of t.advisory) lines.push(pc.yellow(`  advisory ${a.ruleId}: ${a.message}`))
+    }
   }
   return lines.join('\n')
 }
@@ -954,7 +964,7 @@ export function runInstall(argv: string[]): number {
       outcomes.push({
         provider: t.provider,
         path: installName === null ? t.skillsDir : join(t.skillsDir, installName),
-        advisory: [],
+        advisory: null, // gate blocked before the advisory step could run
         installed: false,
         forced: false,
         reason,
@@ -981,13 +991,13 @@ function installTo(t: ResolvedTarget, sourceDir: string, installName: string, fo
     occupied = null
   }
   if (occupied !== null && !force) {
-    return { provider: t.provider, path: dest, advisory: [], installed: false, forced: false, reason: `occupied: ${occupied}` }
+    return { provider: t.provider, path: dest, advisory: null, installed: false, forced: false, reason: `occupied: ${occupied}` }
   }
   try {
     mkdirSync(t.skillsDir, { recursive: true })
     if (occupied === null) {
       cpSync(sourceDir, dest, { recursive: true })
-      return { provider: t.provider, path: dest, advisory: [], installed: true, forced: false, reason: null }
+      return { provider: t.provider, path: dest, advisory: null, installed: true, forced: false, reason: null }
     }
     // Staged copy first, then swap: a completed copy exists before anything is removed.
     const staged = join(t.skillsDir, `.${installName}.shakespii-staging-${process.pid}`)
@@ -996,9 +1006,9 @@ function installTo(t: ResolvedTarget, sourceDir: string, installName: string, fo
     if (lstatSync(dest).isSymbolicLink()) unlinkSync(dest)
     else rmSync(dest, { recursive: true, force: true })
     renameSync(staged, dest)
-    return { provider: t.provider, path: dest, advisory: [], installed: true, forced: true, reason: null }
+    return { provider: t.provider, path: dest, advisory: null, installed: true, forced: true, reason: null }
   } catch (e) {
-    return { provider: t.provider, path: dest, advisory: [], installed: false, forced: false, reason: `write failed: ${(e as Error).message}` }
+    return { provider: t.provider, path: dest, advisory: null, installed: false, forced: false, reason: `write failed: ${(e as Error).message}` }
   }
 }
 ```
@@ -1051,9 +1061,9 @@ removed. INSTALL_REPORT v1 key order pinned by test."
 
 **Interfaces:**
 - Consumes: `detectProviders`/`resolveProvider` (Task 2, already wired), `discoverSkills` from `src/lib/corpus/discover` (throws when root is missing or is itself a skill), `runCorpusRules` from `src/lib/engine` (`(skills: ParsedSkill[], profile) => CorpusFinding[]`; XS sites carry `skill: <dirName>`).
-- Produces: final `runInstall` behavior — `advisory` computed per target; everything else unchanged.
+- Produces: final `runInstall` behavior — `advisory` computed per target (`CorpusFinding[]` when the advisory ran, `[]` = ran clean, `null` = skipped per spec §2.2); everything else unchanged.
 
-**Advisory semantics (spec §2.2 step 3):** corpus context = target's parsed skills + the candidate, assembled in memory. Findings are kept only when a site names the candidate's `dirName`. The existing copy about to be replaced is excluded from the context — otherwise installing an update of a skill over itself reports ~1.0 self-similarity, a guaranteed false positive. Unparseable neighbors are skipped silently (advisory never blocks, so it never errors). Missing/empty target corpus → empty advisory plus a pretty-mode note; the JSON `advisory` array simply stays `[]` (the report's key set is pinned; the skip note is a human-output concern).
+**Advisory semantics (spec §2.2 step 3):** corpus context = target's parsed skills + the candidate, assembled in memory. Findings are kept only when a site names the candidate's `dirName`. The existing copy about to be replaced is excluded from the context — otherwise installing an update of a skill over itself reports ~1.0 self-similarity, a guaranteed false positive. Unparseable neighbors are skipped silently (advisory never blocks, so it never errors). Missing/empty target corpus → the advisory is **skipped and the report says so** (spec §2.2): JSON `advisory` is `null` (vs `[]` = ran clean — the two states are distinguishable by contract), and pretty mode prints the skip note wired in Task 4.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1113,15 +1123,52 @@ test('advisory excludes the same-name copy being replaced (no self-similarity)',
   const r = run(['install', src, '--force', '--json'], { HOME: home })
   expect(r.exitCode).toBe(0)
   const rep = JSON.parse(r.stdout.toString())
-  expect(rep.targets[0].advisory).toEqual([]) // old copy excluded → nothing to compare against
+  expect(rep.targets[0].advisory).toBeNull() // only the old copy existed and it is excluded → skipped, reported as null
 })
 
-test('empty target corpus: advisory empty, install proceeds', () => {
+test('advisory ran clean is [] — distinguishable from skipped null', () => {
   const home = freshHome()
+  const skillsDir = join(home, '.claude/skills')
+  // A genuinely different neighbor (every section distinct), so the advisory
+  // runs and finds nothing — the default helper body would be near-identical
+  // to the candidate's and could trip XS02 by construction.
+  const neighborDir = join(mkdtempSync(join(tmpdir(), 'shakespii-src-')), 'weather-brief')
+  mkdirSync(neighborDir, { recursive: true })
+  writeFileSync(
+    join(neighborDir, 'SKILL.md'),
+    cleanSkillRaw({
+      description: 'Use when the user asks for a one-line weather brief for a named city.',
+      intent: 'Turn a city name into a single-line weather brief.',
+      inputs: 'A city name in plain text.',
+      preconditions: 'A weather source is reachable.',
+      procedure: '1. Fetch the current conditions for the city.\n2. Compose one line: city, sky, temperature.',
+      output: 'One line of weather, nothing else.',
+      examples: 'Given the input `Hanoi`, the expected output is `Hanoi: clear, 31°C`.',
+      'anti-patterns': 'Multi-line forecasts.',
+    })
+      .replace('name: test-skill', 'name: weather-brief')
+      .replace('# test-skill', '# weather-brief'),
+  )
+  mkdirSync(skillsDir, { recursive: true })
+  cpSync(neighborDir, join(skillsDir, 'weather-brief'), { recursive: true })
   const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')))
   const rep = JSON.parse(run(['install', src, '--json'], { HOME: home }).stdout.toString())
   expect(rep.targets[0].advisory).toEqual([])
   expect(rep.targets[0].installed).toBe(true)
+})
+
+test('empty target corpus: advisory skipped — null in JSON, noted in pretty output', () => {
+  const home = freshHome()
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')))
+  const j = run(['install', src, '--json'], { HOME: home })
+  const rep = JSON.parse(j.stdout.toString())
+  expect(rep.targets[0].advisory).toBeNull()
+  expect(rep.targets[0].installed).toBe(true)
+
+  const home2 = freshHome()
+  const p = run(['install', src], { HOME: home2 })
+  expect(p.exitCode).toBe(0)
+  expect(p.stdout.toString()).toContain('advisory: skipped')
 })
 
 test('--provider repeated installs to both, deduplicated', () => {
@@ -1200,12 +1247,12 @@ import type { CorpusFinding, ParsedSkill, Profile } from '../lib/types'
 Add this function at the bottom of the file:
 
 ```ts
-function advisoryFor(skillsDir: string, candidate: ParsedSkill, installName: string, profile: Profile): CorpusFinding[] {
+function advisoryFor(skillsDir: string, candidate: ParsedSkill, installName: string, profile: Profile): CorpusFinding[] | null {
   let skillDirs: string[]
   try {
     skillDirs = discoverSkills(skillsDir).skillDirs
   } catch {
-    return [] // target corpus missing or not a corpus — nothing to compare against
+    return null // target corpus missing or not a corpus — advisory skipped, reported as null (spec §2.2)
   }
   const neighbors: ParsedSkill[] = []
   for (const dir of skillDirs) {
@@ -1218,7 +1265,7 @@ function advisoryFor(skillsDir: string, candidate: ParsedSkill, installName: str
       // unparseable neighbor — advisory is best-effort and never blocks
     }
   }
-  if (neighbors.length === 0) return []
+  if (neighbors.length === 0) return null // nothing to compare against — skipped, not "ran clean"
   return runCorpusRules([...neighbors, candidate], profile).filter(f => f.sites.some(s => s.skill === candidate.dirName))
 }
 ```
@@ -1707,7 +1754,7 @@ instructions, and the gate-checked install onboarding path."
 - Create: `docs/RELEASE-M5C.md` (+ canonical mirror `~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/RELEASE-M5C.md`)
 - Modify: `package.json` (version `0.2.0` → `0.3.0`, release commit)
 
-**This task is controller-executed** (live, partly irreversible, needs the user for npm auth). Do not dispatch it to a subagent.
+**This task is controller-executed** (live, partly irreversible). Do not dispatch it to a subagent. Publish credentials are treated as preflighted machine state with a defined terminal escalation when absent — no step waits on a human mid-flight.
 
 - [ ] **Step 1: Final whole-branch review gate**
 
@@ -1732,13 +1779,38 @@ gh repo edit vuphanse/ai-shakespii --visibility public --accept-visibility-chang
 
 Verify: `gh repo view vuphanse/ai-shakespii --json visibility` → `"visibility": "PUBLIC"`.
 
-- [ ] **Step 4: npm auth — user handoff**
+- [ ] **Step 4: npm auth — autonomous preflight**
 
-Per Task 8 Step 1's finding, either:
-- **Trusted publisher (preferred):** the user configures GitHub Actions trusted publishing for package `shakespii` on npmjs.com (repository `vuphanse/ai-shakespii`, workflow `release.yml`), or
-- **Bootstrap token:** the user creates a granular automation token scoped to publish and stores it as repo secret `NPM_TOKEN` (`gh secret set NPM_TOKEN`), and the Publish step gets the documented `NODE_AUTH_TOKEN` env line for the bootstrap release only.
+Credentials are machine state, probed in order; the first satisfied path wins and the flow proceeds to Step 5 without waiting on anyone. Record the path taken in `docs/RELEASE-M5C.md`.
 
-Hand the user the exact instructions for whichever path applies, and wait for their confirmation before tagging. Record the path used in `docs/RELEASE-M5C.md`.
+**(a) Repo secret already present.** `gh secret list --json name -q '.[].name' | grep -qx NPM_TOKEN` succeeds → the token path is ready. Add the documented env line to the release workflow's Publish step (Task 8's inline comment shows it):
+
+```yaml
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+```
+
+Commit as `ci: enable token bootstrap for the first publish`, then go to Step 5.
+
+**(b) Local npm credential.** `npm whoami` exits 0 — the machine already holds a registry token. Promote it to the repo secret (the user's own repo, the user's own credential, disclosed in the release notes):
+
+```bash
+TOKEN="$(npm config get //registry.npmjs.org/:_authToken)"
+[ -n "$TOKEN" ] && [ "$TOKEN" != "undefined" ] && printf '%s' "$TOKEN" | gh secret set NPM_TOKEN --body-file -
+```
+
+Then apply the same env addition and commit as in (a), and go to Step 5. If the subsequent publish fails with an auth/2FA error, fall through to (d) — classic tokens on 2FA-for-writes accounts cannot publish from CI.
+
+**(c) Blind OIDC attempt.** Neither (a) nor (b) available: a trusted publisher may still have been preconfigured on npmjs.com (not queryable from here). Proceed to Step 5 once — the release workflow publishes via OIDC if the trusted publisher exists. If the run's Publish step fails on auth, roll the tag back cleanly (nothing was published; the version can be re-tagged later):
+
+```bash
+git push --delete origin v0.3.0
+git tag -d v0.3.0
+```
+
+and fall through to (d).
+
+**(d) Terminal escalation — defined stop, not a stall.** Steps 1–3 are already complete and pushed (CI green, repo public). Write `docs/RELEASE-M5C.md` with status "release-ready; publish blocked on npm credential", including the two one-time setup options verbatim — configure a GitHub Actions trusted publisher for package `shakespii` (repository `vuphanse/ai-shakespii`, workflow `release.yml`) on npmjs.com, **or** create a granular automation token and run `gh secret set NPM_TOKEN` — plus the exact resume command (`git tag v0.3.0 && git push origin v0.3.0` after re-applying Step 5's version bump if it was rolled back). Update ROADMAP marking the publish item pending-credential, sync both docs to canonical, commit, push, and hand back with those instructions as the deliverable. Spell out the resume path in the notes: Step 5 in full if it never ran, or just `git tag v0.3.0 && git push origin v0.3.0` if the tag was rolled back (the version-bump commit stays on master either way). The milestone then completes with a single documented command once a credential exists.
 
 - [ ] **Step 5: Release commit and tag**
 
@@ -1806,4 +1878,4 @@ git push origin master
 | §9 out of scope | nothing here builds any of it |
 | §10 documentation deliverables | 8 (README), 9 (ROADMAP + RELEASE-M5C, dual-location) |
 
-Known spec deviations, both disclosed above: (1) the missing-frontmatter-name block (`reason: "no frontmatter name"`) because FM01 is warn-severity in the default profile, so lint alone can't guarantee a destination name; (2) the JSON report carries no explicit advisory-skipped marker — the pinned §2.4 key set has no slot for it, so the skip note is pretty-output only.
+Known spec interpretations, both disclosed above: (1) the missing-frontmatter-name block (`reason: "no frontmatter name"`) because FM01 is warn-severity in the default profile, so lint alone can't guarantee a destination name; (2) spec §2.2's "the advisory step is skipped … and the report says so" is encoded as `advisory: null` (skipped) vs `[]` (ran clean) — same pinned §2.4 key order, the states distinguishable by contract, plus a pretty-mode skip note; both states are pinned by test.

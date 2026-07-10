@@ -100,23 +100,22 @@ user-global `compress` skill stopped answering for bare runs, and a
 retro-scan of the archived M4b-2 corpus flags 9/9 bare run dirs as having
 invoked it (docs/CALIBRATION-M5A.md).
 
-**What isolation does NOT buy — read before trusting a bare-run result.**
-`--setting-sources project,local` does **not** exclude the user memory
-file: `~/.claude/CLAUDE.md` still enters every isolated session.
-docs/CALIBRATION-M5A.md adjudication 2 traces this directly — a failing
-eval-2 scenario run's transcript opens with a ToolSearch for the exact
-ai-cortex select string that appears verbatim in `~/.claude/CLAUDE.md`
-(and nowhere in the mounted skill), and that file's "describe your
-approach and wait for approval" / "ask clarifying questions before
-starting" rules stall headless single-turn sessions at a confirmation
-prompt (adjudication 7 — 10/21 scenario-grading expectation failures
-across evals 1, 2, 6, all evals whose task requires the agent to act
-without a human present to answer). The effect is symmetric across bench
-configurations — it perturbs `with_skill` and `without_skill` identically,
-so bench deltas stay internally fair — but it is real, measured
-contamination of scenario and trigger session behavior that this flag
-does not touch. Full memory-file hermeticity is a recorded backlog item,
-not applied in M5a; it travels to M5b+ (docs/ROADMAP.md, Open decisions).
+**Memory-file scope — version-dependent, re-verify after CLI upgrades.**
+At M5a (2026-07-09), `--setting-sources project,local` did **not** exclude
+the user memory file: docs/CALIBRATION-M5A.md adjudication 2 traced
+`~/.claude/CLAUDE.md` entering isolated sessions (a scenario transcript
+opening with a ToolSearch for a select string that appears verbatim in
+that file and nowhere in the mounted skill), and its ask-before-acting
+rules stalled headless single-turn sessions (adjudication 7 — 10/21
+scenario-grading expectation failures across evals 1, 2, 6). The M5b
+hermeticity spike (docs/HERMETICITY.md, claude CLI 2.1.202) found this
+leak no longer reproduces: a paired canary probe quotes the memory file
+verbatim without the flag and returns NONE with it, so the shipped argv
+now excludes the user memory file on the current CLI. No runner change
+was made and the cache epoch stayed at 2. Because this surface moved
+between CLI versions once, treat it as version-dependent: re-run the
+HERMETICITY.md probe after major CLI upgrades before trusting
+memory-sensitive results.
 
 **Stream-drain bound.** After the child process exits (or is killed by a
 timeout or an early trigger-detect verdict), a pending stdout/stderr

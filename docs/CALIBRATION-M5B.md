@@ -583,8 +583,26 @@ committed v0.1.0 wording (cached m0 replay, 0.80) and adjudicate the loop net-ne
    All three were failures at the committed baseline too — the loop ended
    regression-free at 0.85.
 
+7. **Workspace escape by a live session (post-sweep discovery). Class:
+   environment/safety finding — recorded for M5c.** After the final sweep,
+   an untracked `docs/AUDIT-2026-07-10-skill-duplication.md` appeared in
+   the repo (mtime 11:39, inside the final sweep's window), authored by a
+   live session whose prompt was the corpus-audit query ("Audit all my
+   installed skills for duplication"). Executor and trigger sessions run
+   with `--dangerously-skip-permissions` from a staged temp workspace, but
+   nothing jails their writes: the session located the real repo and wrote
+   an audit report into `docs/`. Verified damage-free: `git status` shows
+   no tracked-file modifications, and zero files under `~/.claude/skills/`
+   were modified (the read-only corpus rule held). The stray file is left
+   untracked for the operator to keep or delete. Recorded candidates for
+   M5c (with the install gate, where session sandboxing belongs): jail or
+   sandbox executor cwd/writes, and extend the contamination scan to flag
+   out-of-workspace Write/Bash file mutations from persisted events.
+
 Zero harness bugs across the milestone: every failure adjudicated to
-environment, eval-authoring, or accepted measurement noise.
+environment, eval-authoring, or accepted measurement noise (adjudication 7
+is an environment/safety finding about session confinement, not a defect in
+the measured stages).
 
 ## Cache proofs
 

@@ -39,9 +39,11 @@
     },
     {
       "id": 4,
-      "prompt": "Run shakespii lint on ./notes, a directory that has no SKILL.md. The shakespii CLI is linked at ~/.bun/bin/shakespii — add ~/.bun/bin to PATH if the bare command doesn't resolve.",
+      "prompt": "Run shakespii lint on .claude/skills/using-shakespii/evals/fixtures/notes — a directory that has no SKILL.md. The shakespii CLI is linked at ~/.bun/bin/shakespii — add ~/.bun/bin to PATH if the bare command doesn't resolve. Run the command as given and report what lint itself says; don't create or add anything.",
       "expected_output": "The agent recognizes exit code 2, reports the lint failure message verbatim, and stops without fabricating findings or retrying in a loop.",
-      "files": [],
+      "files": [
+        "evals/fixtures/notes/README.txt"
+      ],
       "expectations": [
         "Recognizes exit code 2 as lint-could-not-run",
         "Reports the stderr message verbatim and stops",
@@ -62,7 +64,7 @@
     {
       "id": 6,
       "prompt": "Run the evals for .claude/skills/using-shakespii/evals/fixtures/runnable and tell me how each expectation fared. The shakespii CLI is linked at ~/.bun/bin/shakespii — add ~/.bun/bin to PATH if the bare command doesn't resolve. You have my approval for the token spend of --run.",
-      "expected_output": "The agent runs shakespii test with --run and --json on the staged fixture, reports the scenario and grading stages separately, and quotes the grading outcome for each expectation with the grader's evidence — without passing --fresh on an unchanged suite.",
+      "expected_output": "The agent runs shakespii test with --run and --json on the staged fixture, reports the scenario and grading stages separately, and names the failing expectation with the grader's evidence — without passing --fresh on an unchanged suite.",
       "files": [
         "evals/fixtures/runnable/SKILL.md",
         "evals/fixtures/runnable/evals/evals.json"
@@ -71,7 +73,7 @@
         "Proceeds with --run under the prompt's explicit token approval without stalling for further confirmation",
         "Invokes `shakespii test <dir> --run --json` rather than executing evals by hand",
         "Reports the scenario stage and grading stage outcomes separately",
-        "Quotes the failing expectation verbatim with the grader's evidence",
+        "Names the failing expectation and reports the grader's evidence for it",
         "Does not pass --fresh for this first, unchanged run"
       ]
     }

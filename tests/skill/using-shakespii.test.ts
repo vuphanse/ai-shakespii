@@ -8,7 +8,7 @@ const REQUIRED_PROMPT_ANCHORS = [
   'Lint my skill',
   'Create a new skill',
   'Fix the ESLint errors',
-  'Run shakespii lint on ./notes',
+  'Run shakespii lint on',
   'Audit all my installed skills',
   'Run the evals for',
 ]

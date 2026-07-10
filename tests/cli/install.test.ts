@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { cleanSkillRaw } from '../helpers/skill'
@@ -220,4 +220,156 @@ test('pretty mode prints gate lines and an action line', () => {
   const out = r.stdout.toString()
   expect(out).toContain('gate lint: pass')
   expect(out).toContain('installed test-skill →')
+})
+
+// ---- Task 5: multi-provider + advisory ----
+
+/** A body long and distinctive enough to trip XS02 (similarity 0.65) when duplicated. */
+const CLONE_PROCEDURE = [
+  '1. Read the incident channel and collect every alert fired in the last hour.',
+  '2. Group the alerts by originating service and sort each group by first-seen time.',
+  '3. For each group, open the runbook named after the service and follow its triage table.',
+  '4. Record the triage verdict for every alert in the incident timeline document.',
+  '5. Escalate any group whose verdict is page-worthy to the on-call engineer directly.',
+  '6. Summarize the remaining groups into a single digest message for the channel.',
+  '7. Attach the digest to the incident timeline and mark the sweep complete.',
+  '8. Schedule a follow-up sweep for one hour later unless the incident is closed.',
+  '9. If the incident is closed, write the closing summary and archive the timeline.',
+  '10. File one ticket per recurring alert group with the digest linked as evidence.',
+  '11. Tag each ticket with the originating service and the sweep timestamp.',
+  '12. Post the ticket links back into the incident channel as the final step.',
+  '13. Hand the sweep log to the next on-call shift with open questions highlighted.',
+  '14. Review the runbook steps that produced wrong verdicts and note corrections.',
+  '15. Propose one runbook amendment per wrong verdict in the weekly review doc.',
+].join('\n')
+
+test('advisory: duplicate-heavy candidate reports XS findings but still installs', () => {
+  const home = freshHome()
+  const skillsDir = join(home, '.claude/skills')
+  // an existing installed clone
+  const neighborSrc = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')), { name: 'alert-sweep' })
+  writeFileSync(join(neighborSrc, 'SKILL.md'), cleanSkillRaw({ procedure: CLONE_PROCEDURE }).replace('name: test-skill', 'name: alert-sweep').replace('# test-skill', '# alert-sweep'))
+  mkdirSync(skillsDir, { recursive: true })
+  cpSync(neighborSrc, join(skillsDir, 'alert-sweep'), { recursive: true })
+  // the candidate: same body, different name
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')), { name: 'alert-sweeper' })
+  writeFileSync(join(src, 'SKILL.md'), cleanSkillRaw({ procedure: CLONE_PROCEDURE }).replace('name: test-skill', 'name: alert-sweeper').replace('# test-skill', '# alert-sweeper'))
+
+  const r = run(['install', src, '--json'], { HOME: home })
+  expect(r.exitCode).toBe(0) // advisory never blocks
+  const rep = JSON.parse(r.stdout.toString())
+  expect(rep.targets[0].installed).toBe(true)
+  expect(rep.targets[0].advisory.length).toBeGreaterThan(0)
+  expect(rep.targets[0].advisory.some((f: { ruleId: string }) => f.ruleId === 'XS02')).toBe(true)
+  const sites = rep.targets[0].advisory.flatMap((f: { sites: Array<{ skill: string }> }) => f.sites.map(s => s.skill))
+  expect(sites).toContain('alert-sweeper')
+})
+
+test('advisory excludes the same-name copy being replaced (no self-similarity)', () => {
+  const home = freshHome()
+  const skillsDir = join(home, '.claude/skills')
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')), { name: 'alert-sweep' })
+  writeFileSync(join(src, 'SKILL.md'), cleanSkillRaw({ procedure: CLONE_PROCEDURE }).replace('name: test-skill', 'name: alert-sweep').replace('# test-skill', '# alert-sweep'))
+  mkdirSync(skillsDir, { recursive: true })
+  cpSync(src, join(skillsDir, 'alert-sweep'), { recursive: true }) // same skill already installed
+  const r = run(['install', src, '--force', '--json'], { HOME: home })
+  expect(r.exitCode).toBe(0)
+  const rep = JSON.parse(r.stdout.toString())
+  expect(rep.targets[0].advisory).toBeNull() // only the old copy existed and it is excluded → skipped, reported as null
+})
+
+test('advisory ran clean is [] — distinguishable from skipped null', () => {
+  const home = freshHome()
+  const skillsDir = join(home, '.claude/skills')
+  // A genuinely different neighbor (every section distinct), so the advisory
+  // runs and finds nothing — the default helper body would be near-identical
+  // to the candidate's and could trip XS02 by construction.
+  const neighborDir = join(mkdtempSync(join(tmpdir(), 'shakespii-src-')), 'weather-brief')
+  mkdirSync(neighborDir, { recursive: true })
+  writeFileSync(
+    join(neighborDir, 'SKILL.md'),
+    cleanSkillRaw({
+      description: 'Use when the user asks for a one-line weather brief for a named city.',
+      intent: 'Turn a city name into a single-line weather brief.',
+      inputs: 'A city name in plain text.',
+      preconditions: 'A weather source is reachable.',
+      procedure: '1. Fetch the current conditions for the city.\n2. Compose one line: city, sky, temperature.',
+      output: 'One line of weather, nothing else.',
+      examples: 'Given the input `Hanoi`, the expected output is `Hanoi: clear, 31°C`.',
+      'anti-patterns': 'Multi-line forecasts.',
+    })
+      .replace('name: test-skill', 'name: weather-brief')
+      .replace('# test-skill', '# weather-brief'),
+  )
+  mkdirSync(skillsDir, { recursive: true })
+  cpSync(neighborDir, join(skillsDir, 'weather-brief'), { recursive: true })
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')))
+  const rep = JSON.parse(run(['install', src, '--json'], { HOME: home }).stdout.toString())
+  expect(rep.targets[0].advisory).toEqual([])
+  expect(rep.targets[0].installed).toBe(true)
+})
+
+test('empty target corpus: advisory skipped — null in JSON, noted in pretty output', () => {
+  const home = freshHome()
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')))
+  const j = run(['install', src, '--json'], { HOME: home })
+  const rep = JSON.parse(j.stdout.toString())
+  expect(rep.targets[0].advisory).toBeNull()
+  expect(rep.targets[0].installed).toBe(true)
+
+  const home2 = freshHome()
+  const p = run(['install', src], { HOME: home2 })
+  expect(p.exitCode).toBe(0)
+  expect(p.stdout.toString()).toContain('advisory: skipped')
+})
+
+test('--provider repeated installs to both, deduplicated', () => {
+  const home = freshHome()
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')))
+  const r = run(['install', src, '--provider', 'claude', '--provider', 'codex', '--provider', 'claude', '--json'], { HOME: home })
+  expect(r.exitCode).toBe(0)
+  const rep = JSON.parse(r.stdout.toString())
+  expect(rep.targets.map((t: { provider: string }) => t.provider)).toEqual(['claude', 'codex'])
+  expect(existsSync(join(home, '.claude/skills/test-skill/SKILL.md'))).toBe(true)
+  expect(existsSync(join(home, '.codex/skills/test-skill/SKILL.md'))).toBe(true)
+})
+
+test('unknown provider: exit 2 listing the registry', () => {
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')))
+  const r = run(['install', src, '--provider', 'emacs'], { HOME: freshHome() })
+  expect(r.exitCode).toBe(2)
+  expect(r.stderr.toString()).toContain('unknown provider: emacs')
+  expect(r.stderr.toString()).toContain('ezio')
+})
+
+test('--provider all targets only detected providers', () => {
+  const home = freshHome()
+  mkdirSync(join(home, '.claude'), { recursive: true })
+  mkdirSync(join(home, '.config/ai-ezio'), { recursive: true })
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')))
+  const r = run(['install', src, '--provider', 'all', '--json'], { HOME: home })
+  expect(r.exitCode).toBe(0)
+  const rep = JSON.parse(r.stdout.toString())
+  expect(rep.targets.map((t: { provider: string }) => t.provider)).toEqual(['claude', 'ezio'])
+  expect(existsSync(join(home, '.config/ai-ezio/skills/test-skill/SKILL.md'))).toBe(true)
+})
+
+test('--provider all with nothing detected: exit 2', () => {
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')))
+  const r = run(['install', src, '--provider', 'all'], { HOME: freshHome() })
+  expect(r.exitCode).toBe(2)
+  expect(r.stderr.toString()).toContain('no providers detected')
+})
+
+test('partial multi-target outcome: occupied target blocked, other installed, exit 1', () => {
+  const home = freshHome()
+  const src = writeSkill(mkdtempSync(join(tmpdir(), 'shakespii-src-')))
+  mkdirSync(join(home, '.codex/skills/test-skill'), { recursive: true }) // pre-occupy codex only
+  const r = run(['install', src, '--provider', 'claude', '--provider', 'codex', '--json'], { HOME: home })
+  expect(r.exitCode).toBe(1)
+  const rep = JSON.parse(r.stdout.toString())
+  const byProvider = Object.fromEntries(rep.targets.map((t: { provider: string }) => [t.provider, t]))
+  expect(byProvider.claude.installed).toBe(true)
+  expect(byProvider.codex).toMatchObject({ installed: false, reason: 'occupied: directory' })
+  expect(existsSync(join(home, '.claude/skills/test-skill/SKILL.md'))).toBe(true)
 })

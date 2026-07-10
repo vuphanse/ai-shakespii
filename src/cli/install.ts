@@ -1,14 +1,15 @@
 import { cpSync, existsSync, lstatSync, mkdirSync, renameSync, rmSync, statSync, unlinkSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
-import { runRules } from '../lib/engine'
+import { discoverSkills } from '../lib/corpus/discover'
+import { runCorpusRules, runRules } from '../lib/engine'
 import { runDeterministic } from '../lib/harness/deterministic'
 import type { HarnessFinding } from '../lib/harness/types'
 import { decideGate } from '../lib/install/gate'
 import { detectProviders, PROVIDER_NAMES, resolveProvider } from '../lib/install/registry'
 import { parseSkill } from '../lib/parser'
 import { loadProfile } from '../lib/profile/load'
-import type { ParsedSkill, Profile } from '../lib/types'
+import type { CorpusFinding, ParsedSkill, Profile } from '../lib/types'
 import { installJsonReport, type TargetOutcome } from './format/install-json'
 import { formatInstallPretty } from './format/install-pretty'
 import { defaultProfilePath, packageRoot } from './paths'
@@ -161,7 +162,8 @@ export function runInstall(argv: string[]): number {
     }
   } else {
     for (const t of resolved) {
-      outcomes.push(installTo(t, sourceDir, installName, force))
+      const advisory = advisoryFor(t.skillsDir, skill, installName, profile)
+      outcomes.push({ ...installTo(t, sourceDir, installName, force), advisory })
     }
   }
 
@@ -199,4 +201,26 @@ function installTo(t: ResolvedTarget, sourceDir: string, installName: string, fo
   } catch (e) {
     return { provider: t.provider, path: dest, advisory: null, installed: false, forced: false, reason: `write failed: ${(e as Error).message}` }
   }
+}
+
+function advisoryFor(skillsDir: string, candidate: ParsedSkill, installName: string, profile: Profile): CorpusFinding[] | null {
+  let skillDirs: string[]
+  try {
+    skillDirs = discoverSkills(skillsDir).skillDirs
+  } catch {
+    return null // target corpus missing or not a corpus — advisory skipped, reported as null (spec §2.2)
+  }
+  const neighbors: ParsedSkill[] = []
+  for (const dir of skillDirs) {
+    // Exclude the copy this install is about to replace: comparing a skill
+    // against its own previous version is guaranteed self-similarity noise.
+    if (basename(dir) === installName || basename(dir) === candidate.dirName) continue
+    try {
+      neighbors.push(parseSkill(dir))
+    } catch {
+      // unparseable neighbor — advisory is best-effort and never blocks
+    }
+  }
+  if (neighbors.length === 0) return null // nothing to compare against — skipped, not "ran clean"
+  return runCorpusRules([...neighbors, candidate], profile).filter(f => f.sites.some(s => s.skill === candidate.dirName))
 }

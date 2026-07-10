@@ -15,6 +15,8 @@ Milestone: M5c — the full milestone: `shakespii install` gate + CI pipeline + 
 | 5 | Gate bar | Lint **errors block** install; warnings print but never block. If `evals/evals.json` exists, the deterministic test stage must also pass. Cross-skill duplication (XS01/XS02) against the target corpus is advisory-only. |
 | 6 | Bundled skills | `shakespii install <name>` resolves skills bundled in the npm package (`using-shakespii`, `authoring-skills`) as well as filesystem paths. |
 | 7 | License | MIT. |
+| 8 | Providers | Install targets are provider-aware, not Claude-only. Registry ships all six well-known targets: `claude`, `codex`, `cursor`, `antigravity`, `gemini`, `agents` (the tool-agnostic `~/.agents/skills` standard). `claude` stays the default. |
+| 9 | ezio | The in-house agent gets a dedicated registry entry now: `ezio` → `~/.ezio/skills`. |
 
 Standing decision honored: distribution was decided 2026-07-07 as "local `bun link` for the MVP; npm publish graduates at M5c" (M2 spec, ROADMAP open-decisions table). This milestone is that graduation.
 
@@ -39,10 +41,33 @@ Consumers install with `bun add -g shakespii` or `npm i -g shakespii`; either wa
 ## 2. `shakespii install` — the gate
 
 ```
-shakespii install <path-or-name> [--target <dir>] [--force] [--json]
+shakespii install <path-or-name> [--provider <name>]... [--target <dir>] [--force] [--json]
 ```
 
 New CLI surface; the lint / test / bench surfaces are untouched.
+
+### 2.0 Provider registry
+
+Skills produced by this tool are standard Agent Skills (non-negotiable decision 1), so one artifact installs into any compliant tool — only the destination differs. The registry maps provider name → user-level skills directory (resolved against the home directory at call time, so tests can redirect via a temp `HOME`):
+
+| Provider | Root (detection) | Skills dir |
+|---|---|---|
+| `claude` | `~/.claude` | `~/.claude/skills` |
+| `codex` | `~/.codex` | `~/.codex/skills` |
+| `cursor` | `~/.cursor` | `~/.cursor/skills` |
+| `antigravity` | `~/.gemini` | `~/.gemini/config/skills` |
+| `gemini` | `~/.gemini` | `~/.gemini/skills` |
+| `agents` | `~/.agents` | `~/.agents/skills` |
+| `ezio` | `~/.ezio` | `~/.ezio/skills` |
+
+Sources for the third-party paths: Cursor docs (cursor.com/docs/skills), the Codex skills ecosystem docs, and the Antigravity/Gemini skills-location guide; `codex` additionally verified on this machine (`~/.codex/skills` exists). The implementer re-verifies each path against current provider docs at build time. Two operational notes: Cursor also reads `~/.claude/skills` and `~/.codex/skills` directly, so a `claude` install already covers Cursor; `antigravity` and `gemini` share the `~/.gemini` root but use different skills dirs.
+
+Target selection:
+
+- `--provider <name>`, repeatable — install into each named provider's skills dir. Unknown name → exit 2 listing the registry.
+- `--provider all` — every provider whose root directory exists on the machine ("detected"). Detection is deliberately loose for the shared `~/.gemini` root; explicit `--provider` works regardless of detection.
+- `--target <dir>` — raw directory escape hatch (e.g. a project-level `.claude/skills`, or a stopgap for an unregistered tool). Mutually exclusive with `--provider` (exit 2 if both).
+- Default when neither flag is given: `claude`.
 
 ### 2.1 Source resolution
 
@@ -52,15 +77,18 @@ New CLI surface; the lint / test / bench surfaces are untouched.
 
 ### 2.2 Gate sequence (read-only until pass)
 
-1. **Lint** the source skill standalone with the same profile-resolution semantics as `shakespii lint <path>`. Any `error`-severity finding blocks (exit 1). Warnings are reported but never block.
-2. **Deterministic test stage**, only if `evals/evals.json` exists: schema validation, cross-document checks, fixture resolution — the tokenless stage of `shakespii test`. Any failure blocks (exit 1). No LLM stage ever runs during install.
-3. **Corpus advisory**: assemble the corpus context as the target directory's existing skills plus the candidate (in memory, via the pure lib — rules never touch disk, so no staging copy is needed) and run the cross-skill rules. XS findings involving the candidate are reported as advisory; they never block. If the target directory is missing or has no skills, the advisory step is skipped and the report says so.
+The source gate (steps 1–2) runs **once per invocation**; step 3 runs **per target**.
 
-### 2.3 Install action
+1. **Lint** the source skill standalone with the same profile-resolution semantics as `shakespii lint <path>`. Any `error`-severity finding blocks all targets (exit 1). Warnings are reported but never block.
+2. **Deterministic test stage**, only if `evals/evals.json` exists: schema validation, cross-document checks, fixture resolution — the tokenless stage of `shakespii test`. Any failure blocks all targets (exit 1). No LLM stage ever runs during install.
+3. **Corpus advisory**, per target: assemble the corpus context as that target directory's existing skills plus the candidate (in memory, via the pure lib — rules never touch disk, so no staging copy is needed) and run the cross-skill rules. XS findings involving the candidate are reported as advisory; they never block. If a target directory is missing or has no skills, the advisory step is skipped for that target and the report says so.
 
-- Destination: `<target>/<name>/` where `<name>` is the frontmatter `name` field (guaranteed present once lint passes), not the source directory basename. Default `--target` is `~/.claude/skills` (tilde-expanded); the target directory is created with `mkdir -p` semantics if absent.
+### 2.3 Install action (per target)
+
+- Destination: `<skills-dir>/<name>/` where `<name>` is the frontmatter `name` field (guaranteed present once lint passes), not the source directory basename. Skills directories are created with `mkdir -p` semantics if absent (installing to an explicitly named provider that has no skills dir yet — e.g. cursor today — is correct behavior, not an error).
 - Copy: full recursive copy of the source skill directory (SKILL.md, references, evals, fixtures — the skill directory is the unit).
-- Occupied destination (directory, file, or **symlink** — detected with `lstat`, never followed): refused without `--force` (exit 1, message says what occupies the slot). With `--force`: stage the copy in a temp sibling inside the target, remove the old entry (a symlink is removed as a link; its referent is never touched), rename the staged copy into place. The staged-then-swap order guarantees a completed copy exists before anything is removed.
+- Occupied destination (directory, file, or **symlink** — detected with `lstat`, never followed): that target is refused without `--force` (message says what occupies the slot). With `--force`: stage the copy in a temp sibling inside the target, remove the old entry (a symlink is removed as a link; its referent is never touched), rename the staged copy into place. The staged-then-swap order guarantees a completed copy exists before anything is removed.
+- Multi-target outcomes are independent: one occupied target does not stop the others. The exit code aggregates: `0` only when every requested target installed; `1` when the source gate blocked or any target was refused; re-running with `--force` is idempotent.
 
 ### 2.4 Report contract
 
@@ -71,22 +99,28 @@ New CLI surface; the lint / test / bench surfaces are untouched.
   "version": 1,
   "skill": "<frontmatter name, or null when lint could not parse it>",
   "source": { "kind": "path" | "bundled", "path": "<absolute source dir>" },
-  "target": "<absolute destination dir>",
   "gate": {
     "lint": { "status": "pass" | "fail", "errors": 0, "warnings": 0, "findings": [] },
-    "test": { "status": "pass" | "fail" | "skipped", "failures": [] },
-    "advisory": []
+    "test": { "status": "pass" | "fail" | "skipped", "failures": [] }
   },
-  "installed": false,
-  "forced": false
+  "targets": [
+    {
+      "provider": "claude",
+      "path": "<absolute destination dir>",
+      "advisory": [],
+      "installed": true,
+      "forced": false,
+      "reason": null
+    }
+  ]
 }
 ```
 
-Finding objects inside `gate.lint.findings` and `gate.advisory` reuse the lint `--json` v1 finding shape verbatim (same serializer); `gate.test.failures` reuses the deterministic-stage failure shape from `shakespii test --json`. The install report is a thin envelope over existing serializers, not a new schema for findings.
+`targets` has one entry per requested target, in request order; `provider` is `null` for a raw `--target` install; `reason` is `null` when installed, else a short block reason (e.g. `"occupied: symlink"`, `"gate: lint errors"`). Finding objects inside `gate.lint.findings` and each target's `advisory` reuse the lint `--json` v1 finding shape verbatim (same serializer); `gate.test.failures` reuses the deterministic-stage failure shape from `shakespii test --json`. The install report is a thin envelope over existing serializers, not a new schema for findings.
 
-Human (non-`--json`) output mirrors the lint output style: gate results per step, then an action line (`installed <name> → <path>`, or the block reason).
+Human (non-`--json`) output mirrors the lint output style: gate results per step, then one action line per target (`installed <name> → <path>`, or the block reason).
 
-Exit codes, matching lint conventions: `0` gate passed and installed; `1` gate blocked or destination occupied without `--force`; `2` usage error (unresolvable source, bad flags).
+Exit codes, matching lint conventions: `0` gate passed and every target installed; `1` gate blocked, or any destination occupied without `--force`; `2` usage error (unresolvable source, unknown provider, `--provider` with `--target`, bad flags).
 
 ### 2.5 Implementation shape
 
@@ -94,7 +128,7 @@ Gate decision (findings + test result + destination state → verdict) is a pure
 
 ### 2.6 Companion-skill update: using-shakespii v0.7.0
 
-Per the agent-first interface decision (2026-07-07), every CLI capability is taught by the companion skill. using-shakespii gets a body-only update teaching the install loop: when to use `shakespii install` (gate semantics, what blocks vs. advises), `--force` over an occupied slot, bundled-name onboarding, and reading the INSTALL_REPORT. The **description does not change** — it stays frozen at the M5b-measured wording (trigger accuracy 0.80–0.95 band), so no live trigger re-measurement is needed. Version bumps to 0.7.0; the weld-test re-pins for the version string are sanctioned.
+Per the agent-first interface decision (2026-07-07), every CLI capability is taught by the companion skill. using-shakespii gets a body-only update teaching the install loop: when to use `shakespii install` (gate semantics, what blocks vs. advises), provider selection (`--provider`, the registry, `all`, the `--target` escape hatch), `--force` over an occupied slot, bundled-name onboarding, and reading the INSTALL_REPORT. The **description does not change** — it stays frozen at the M5b-measured wording (trigger accuracy 0.80–0.95 band), so no live trigger re-measurement is needed. Version bumps to 0.7.0; the weld-test re-pins for the version string are sanctioned.
 
 ## 3. CI workflow — `.github/workflows/ci.yml`
 
@@ -124,7 +158,7 @@ Trigger: push of tag `v*`. Permissions: `contents: read`, `id-token: write`.
 3. Workflows (`ci.yml`, `release.yml`) + `scripts/check-pack.ts` — commit; verify CI green on push
 4. Flip repo public: `gh repo edit vuphanse/ai-shakespii --visibility public` (adjudication 2; note: this publishes the full git history — calibration docs, specs, audit references to personal skill names; user reviewed and accepted)
 5. Configure npm auth (trusted publisher or bootstrap token per §4), bump version 0.2.0 → 0.3.0, tag `v0.3.0`, push tag → CI publishes
-6. User onboarding (the dogfood start): `bun add -g shakespii`; `shakespii install using-shakespii --force` (replaces the current repo symlink in `~/.claude/skills` with the published copy); `shakespii install authoring-skills`
+6. User onboarding (the dogfood start): `bun add -g shakespii`; `shakespii install using-shakespii --force` (replaces the current repo symlink in `~/.claude/skills` with the published copy); `shakespii install authoring-skills`; optionally fan out to other tools, e.g. `shakespii install authoring-skills --provider codex` or `--provider all`
 
 ## 6. Testing strategy
 
@@ -140,6 +174,8 @@ Required coverage:
 - skill without `evals/` → `gate.test.status: "skipped"`, installable
 - bundled-name resolution (both bundled skills); unresolvable arg → exit 2; path-over-name precedence
 - occupied destination: directory without `--force` → exit 1; symlink without `--force` → exit 1; `--force` over directory and over symlink → replaced, referent untouched
+- provider registry: each name resolves to its documented skills dir under an injected temp `HOME`; unknown provider → exit 2; `--provider` repeated → both targets; `--provider all` under a temp `HOME` with a subset of roots → only detected providers; `--provider` + `--target` together → exit 2
+- multi-target partial outcome: two temp providers, one occupied → occupied target blocked with reason, other installed, exit 1
 - corpus advisory: duplicate-heavy candidate against a populated temp corpus → advisory findings present, install still proceeds; empty target → advisory skipped
 - `--json` byte-shape pin (key order, INSTALL_REPORT version 1); exit-code triple
 - gate decision pure-function unit tests (lib)
@@ -155,7 +191,7 @@ Lint CLI + JSON v1; flagless `test` byte-identical; bench schema and stdout puri
 2. CI workflow green on `master`
 3. Repo public; `LICENSE` present
 4. Tag `v0.3.0` push produces a successful npm publish of `shakespii@0.3.0`; `npm view shakespii version` returns `0.3.0`
-5. On the user's machine: `bun add -g shakespii` succeeds; `shakespii install using-shakespii --force` and `shakespii install authoring-skills` both gate-pass and land copies in `~/.claude/skills/`; the installed using-shakespii is v0.7.0 (teaches the install loop, §2.6); the installed CLI runs `lint` / `test` / `init` from the published package (templates + profile resolve from the tarball layout)
+5. On the user's machine: `bun add -g shakespii` succeeds; `shakespii install using-shakespii --force` and `shakespii install authoring-skills` both gate-pass and land copies in `~/.claude/skills/`; at least one non-claude provider install verified live (e.g. `--provider codex` → `~/.codex/skills/`); the installed using-shakespii is v0.7.0 (teaches the install loop, §2.6); the installed CLI runs `lint` / `test` / `init` from the published package (templates + profile resolve from the tarball layout)
 6. ROADMAP M5c section checked off with commit hashes; closeout notes record the publish-auth path used (§4)
 
 ## 9. Out of scope

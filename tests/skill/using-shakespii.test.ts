@@ -67,9 +67,18 @@ test('triggers.json carries 20 labeled queries: 11 positive, 9 near-miss negativ
   for (const q of doc.queries) expect(q.query.length).toBeGreaterThan(0)
 })
 
-test('v0.6.0 teaches the bench and trigger loops', async () => {
+test('v0.7.0 teaches the bench, trigger, and install loops', async () => {
   const raw = await Bun.file(join(SKILL_DIR, 'SKILL.md')).text()
-  expect(raw).toContain('version: 0.6.0')
+  expect(raw).toContain('version: 0.7.0')
   expect(raw).toContain('shakespii bench')
   expect(raw).toContain('--triggers')
+  expect(raw).toContain('shakespii install')
+  expect(raw).toContain('--provider')
+})
+
+test('description is byte-frozen at the M5b-measured wording', async () => {
+  const raw = await Bun.file(join(SKILL_DIR, 'SKILL.md')).text()
+  expect(raw).toContain(
+    'description: "Use when the user asks to lint, audit, test, benchmark, validate, or fix an agent skill — from a single SKILL.md frontmatter check to trigger-accuracy measurement or a corpus-wide audit of installed skills for duplication — driving the shakespii CLI (init, lint --json, test --run, bench) to resolve findings until clean."',
+  )
 })

@@ -1,7 +1,7 @@
 ---
 name: using-shakespii
 description: "Use when the user asks to lint, audit, test, benchmark, validate, or fix an agent skill — from a single SKILL.md frontmatter check to trigger-accuracy measurement or a corpus-wide audit of installed skills for duplication — driving the shakespii CLI (init, lint --json, test --run, bench) to resolve findings until clean."
-version: 0.6.0
+version: 0.7.0
 ---
 
 # using-shakespii
@@ -23,8 +23,9 @@ contract instead of by taste. The CLI decides; this skill teaches the loop aroun
 ## Preconditions
 
 - Bun is installed and on PATH (`bun --version` succeeds).
-- The shakespii repo is cloned, dependencies installed, and the CLI linked:
-  `bun install && bun link` inside the repo; `shakespii --version` then resolves.
+- The shakespii CLI resolves: either installed globally (`bun add -g shakespii`;
+  the binary lands in `~/.bun/bin`), or the repo cloned and linked
+  (`bun install && bun link` inside it); `shakespii --version` then succeeds.
 - Audit: the target skill directory is readable.
 - Authoring: the parent directory for the new skill is writable.
 
@@ -138,6 +139,33 @@ deliberate loop, not a guess: adjust the wording, re-run with `--fresh` to
 bypass the cache and force fresh measurement, and stop once accuracy holds
 at 0.8 or above without regressing queries that already passed.
 
+### Installing a skill
+
+Once a skill lints clean and its evals pass, land it in an agent's live
+skills directory through the gate rather than by hand-copying:
+
+```bash
+shakespii install <skill-dir-or-bundled-name> --json
+```
+
+`install` re-lints the source, runs the deterministic eval checks when
+`evals/evals.json` exists, and only then copies the skill into the target.
+Lint errors or deterministic failures block the install (exit 1); warnings
+never block — surface them to the human instead. The default target is
+Claude (`~/.claude/skills`); `--provider <name>` selects others (claude,
+codex, cursor, antigravity, gemini, agents, ezio — repeat the flag for
+several, or `--provider all` for every provider detected on the machine),
+and `--target <dir>` installs into an arbitrary directory. An occupied
+destination — an existing directory or symlink — is refused unless the
+human approves replacing it; with that approval, add `--force`. The
+`--json` report (`version: 1`) carries the gate verdict in `gate.lint` and
+`gate.test` plus one entry per target in `targets[]` (`installed`,
+`forced`, `reason`); `targets[].advisory` lists cross-skill duplication
+findings (XS rules) against the skills already installed at that target —
+advisory only, never a block, but report them to the human. Exit codes:
+0 = gate passed and every target installed; 1 = gate blocked or a target
+refused; 2 = usage error (unknown provider, unresolvable skill).
+
 Authoring branch — create a new skill:
 
 5. Confirm name, purpose, and trigger situations with the human (or adopt
@@ -149,8 +177,9 @@ Authoring branch — create a new skill:
 8. Fill `evals/evals.json` with at least three cases, one of them a near-miss
    negative that must not trigger the skill.
 9. Work the fix loop until lint is clean, then present the skill, its lint output,
-   and its evals to the human. Do not install into `~/.claude/skills/` without
-   explicit approval, and never with findings outstanding.
+   and its evals to the human. Install only with explicit approval and never with
+   findings outstanding — and when approved, install through `shakespii install`
+   (see "Installing a skill"), not by hand-copying.
 
 ## Output
 
@@ -188,3 +217,5 @@ remaining warnings.
 - Installing a freshly authored skill without human approval, or with findings open.
 - Looping on a run that exited `2` — that exit means lint itself could not run;
   report it instead of retrying.
+- Hand-copying a skill into a live skills directory when `shakespii install`
+  exists — the gate is the point of the install step.

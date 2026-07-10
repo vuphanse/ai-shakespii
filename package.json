@@ -38,7 +38,8 @@
     "ai-agents"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check-pack": "bun scripts/check-pack.ts"
   },
   "dependencies": {
     "picocolors": "^1.1.1",

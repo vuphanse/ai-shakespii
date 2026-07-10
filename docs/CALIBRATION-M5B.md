@@ -615,6 +615,51 @@ environment, eval-authoring, or accepted measurement noise (adjudication 7
 is an environment/safety finding about session confinement, not a defect in
 the measured stages).
 
+## Remediation round (acceptance-mandated, post-calibration)
+
+The workflow acceptance review rejected the honest-red close: the plan's
+Task 8 gate ("scenario + grading stages exit-0 clean") governs over the
+in-phase eval-edit freeze, and the reviewer ordered the recorded
+adjudication-1/4 candidates applied and the sweeps re-run until green. This
+round is therefore a disclosed post-calibration repair with its own
+predictions, not a mid-sweep rewording: the original measurements and
+adjudications above stand unchanged as the record of what the committed
+evals measured.
+
+Applied (all pre-sweep for this round):
+
+- Evals 1 and 6 retargeted from drifted live-corpus skills to staged
+  fixtures shipped inside the skill: `evals/fixtures/lintbait` (two known
+  frontmatter findings, FM04 + FM05, so the remediation loop is real and
+  the fix happens on the staged workspace copy) and
+  `evals/fixtures/runnable` (a valid three-case suite whose third
+  expectation fails by design, so a runner has a real grading failure to
+  quote). Both are wired through the evals' `files` staging.
+- Every CLI-driving prompt (using-shakespii 1/2/4/5/6, authoring-skills 1)
+  gains one precondition sentence naming the CLI's linked location
+  (`~/.bun/bin/shakespii`) — the headless-eval-rules "prompt carries every
+  input" rule applied to the PATH finding of adjudication 1.
+- using-shakespii eval-6 expectations reworded to the staged-fixture form
+  (stage-separated reporting, verbatim failing-expectation quote, no
+  `--fresh` on an unchanged first run).
+- authoring-skills eval-4 prompt carries its own nothing-to-clarify
+  instruction and its expectations assert the observable outcome (blog post
+  written, no authoring behavior) — closing the adjudication-4 wrapper
+  interplay.
+- The runnable fixture's inner suite was pre-warmed once
+  (deterministic exit 1 with exactly the designed single grading failure),
+  so the eval session's nested `--run` replays from cache (~0.05 s) inside
+  the session budget.
+
+Predictions for this round: both suites exit 0 (scenario, grading, and
+trigger all clean/gated); trigger accuracies within one flake of the final
+measurements above (using-shakespii ≥ 0.85, authoring-skills ≥ 0.80, both
+holding the 0.8 gate); zero contamination warnings; zero grader retries.
+
+### Remediation actuals
+
+(Recorded after the re-sweeps.)
+
 ## Cache proofs
 
 Not owed this milestone (prediction 8 held): the epoch did not move. The

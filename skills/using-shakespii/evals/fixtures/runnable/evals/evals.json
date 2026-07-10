@@ -1,0 +1,32 @@
+{
+  "skill_name": "runnable",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Say the word apple.",
+      "expected_output": "The reply is the word apple.",
+      "files": [],
+      "expectations": [
+        "Says the word apple"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Count to three.",
+      "expected_output": "The reply counts one, two, three.",
+      "files": [],
+      "expectations": [
+        "Counts to three in order"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Say hello.",
+      "expected_output": "The reply is a greeting; the expectation below fails by design so runners have a real grading failure to report.",
+      "files": [],
+      "expectations": [
+        "Mentions the word xylophone"
+      ]
+    }
+  ]
+}

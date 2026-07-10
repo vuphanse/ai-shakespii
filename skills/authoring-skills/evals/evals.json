@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Create a new skill called retry-taxonomy that teaches agents to classify flaky test failures before retrying. Purpose: stop blind retries by classifying the failure first. Triggers: the user asks why CI is flaky or wants a failed run diagnosed before rerunning. Worked example you can use: input — a Jest log ending in ECONNRESET from a service call; output — classification \"infrastructure flake: retry with backoff\", not a code fix. Keep every section brief. You have my approval to scaffold and run the lint loop; proceed without questions.",
+      "prompt": "Create a new skill called retry-taxonomy that teaches agents to classify flaky test failures before retrying. Purpose: stop blind retries by classifying the failure first. Triggers: the user asks why CI is flaky or wants a failed run diagnosed before rerunning. Worked example you can use: input — a Jest log ending in ECONNRESET from a service call; output — classification \"infrastructure flake: retry with backoff\", not a code fix. The shakespii CLI is linked at ~/.bun/bin/shakespii — add ~/.bun/bin to PATH if the bare command doesn't resolve. Keep every section brief. You have my approval to scaffold and run the lint loop; proceed without questions.",
       "expected_output": "The agent scaffolds with shakespii init, fills every section from the supplied material, works the lint loop to a clean exit, and presents the result without installing it.",
       "files": [],
       "expectations": [
@@ -37,12 +37,12 @@
     },
     {
       "id": 4,
-      "prompt": "Write a blog post explaining what agent skills are and why they matter.",
-      "expected_output": "The authoring loop does not engage; the agent writes the requested prose as an ordinary writing task.",
+      "prompt": "Write a blog post explaining what agent skills are and why they matter. Any reasonable angle is fine — nothing to clarify; just write it.",
+      "expected_output": "The authoring loop does not engage; the agent writes the blog post directly in its reply.",
       "files": [],
       "expectations": [
         "Does not run the authoring interview or create any skill directory",
-        "Handles the request as an ordinary writing task"
+        "Writes the requested blog post in its final message"
       ]
     }
   ]

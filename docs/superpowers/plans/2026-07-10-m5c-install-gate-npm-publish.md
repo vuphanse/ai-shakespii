@@ -454,7 +454,7 @@ remains installable (spec adjudication 5)."
 
 **Behavior being built (spec §2.1–§2.4, single target):** resolve source (path wins over bundled name) → lint + deterministic gate → resolve one target (default `claude` via registry, or `--target <dir>`) → occupancy check (`lstat`, symlink never followed) → staged copy + swap under `--force` → INSTALL_REPORT v1 on `--json`. Exit 0 installed / 1 blocked / 2 usage.
 
-One deliberate deviation from the spec's §2.3 wording, discovered against the real default profile: FM01 (missing `name`) is a *warning* in `profiles/default.yaml`, so lint can pass while the frontmatter name is absent. When `gate.pass` is true but the name is missing, the install is blocked with `reason: "no frontmatter name"` and exit 1 (never guess a destination directory name).
+One defensive branch beyond the spec's §2.3 wording: when `gate.pass` is true but the frontmatter name is missing, the install is blocked with `reason: "no frontmatter name"` and exit 1 (never guess a destination directory name). [Corrected at closeout: FM01 is error-severity in `profiles/default.yaml` — a missing name already fails the gate, so this branch is unreachable defense-in-depth, not a live gap; the plan originally misread FM01's warn-only unknown-fields sub-case as covering missing names.]
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1878,4 +1878,4 @@ git push origin master
 | §9 out of scope | nothing here builds any of it |
 | §10 documentation deliverables | 8 (README), 9 (ROADMAP + RELEASE-M5C, dual-location) |
 
-Known spec interpretations, both disclosed above: (1) the missing-frontmatter-name block (`reason: "no frontmatter name"`) because FM01 is warn-severity in the default profile, so lint alone can't guarantee a destination name; (2) spec §2.2's "the advisory step is skipped … and the report says so" is encoded as `advisory: null` (skipped) vs `[]` (ran clean) — same pinned §2.4 key order, the states distinguishable by contract, plus a pretty-mode skip note; both states are pinned by test.
+Known spec interpretations, both disclosed above: (1) the missing-frontmatter-name block (`reason: "no frontmatter name"`) — defense-in-depth; corrected at closeout: FM01 is error-severity so the gate already blocks a missing name and this branch is unreachable belt-and-braces; (2) spec §2.2's "the advisory step is skipped … and the report says so" is encoded as `advisory: null` (skipped) vs `[]` (ran clean) — same pinned §2.4 key order, the states distinguishable by contract, plus a pretty-mode skip note; both states are pinned by test.

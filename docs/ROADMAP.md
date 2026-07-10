@@ -90,10 +90,14 @@ Commit range: 166fcd7..246c054.
 
 Commit range: 5c5c711..d0ee935 (docs closeout follows).
 
-## M5c — Install gate + npm publish
+## M5c — Install gate + npm publish (code complete 2026-07-10; publish pending credential)
 
-- [ ] Install gate: lint must pass before a skill lands in `~/.claude/skills/`
-- [ ] npm publish graduation (distribution decision, M2 spec): move off local `bun link` for the MVP
+- [x] Install gate: `shakespii install <path-or-name>` — lint errors + deterministic eval failures block, warnings advise, per-target XS duplication advisory (three-valued contract), 7-provider registry (claude default, codex, cursor, antigravity, gemini, agents, ezio), `--force` staged swap, INSTALL_REPORT v1 (30ee457..5295625)
+- [x] using-shakespii v0.7.0 teaches the install loop, description byte-frozen at the M5b-measured wording (00561a7)
+- [x] CI + release pipelines: `ci.yml` gates (typecheck, hermetic suite, self-lint, deterministic eval checks, tarball guard) green on ubuntu-latest after the NO_COLOR fix (a7694c1, fa7650b, 1a23420); repo public; MIT; package renamed `shakespii` (dda62e3..30ee457)
+- [ ] npm publish graduation — **release-ready, blocked on npm credential**: v0.3.0 staged (d853873), tag withheld; resume = set `NPM_TOKEN` secret, then `git tag v0.3.0 && git push origin v0.3.0` (see docs/RELEASE-M5C.md)
+
+Commit range: dda62e3..d853873 (specs/plan + 9 task commits + CI fix + release staging).
 
 ## M5d — Personal-skill migration
 
@@ -110,7 +114,7 @@ Author the missing engineering skills through shakespii's own pipeline (dogfood)
 | Decision | Options on the table | Notes |
 |---|---|---|
 | Runtime language | ~~TypeScript/Node (or Bun), Python, Go~~ | **Decided 2026-07-07: TypeScript on Bun** (M2 spec) |
-| Distribution | ~~npm package, Homebrew, plain git clone~~ | **Decided 2026-07-07: local link (`bun link`) for the MVP; npm publish graduates at M5c** |
+| Distribution | ~~npm package, Homebrew, plain git clone~~ | **Decided 2026-07-07: local link for MVP; npm at M5c.** M5c executed 2026-07-10: package `shakespii`, public repo, tag-driven publish — release-ready, tag fires once an npm credential exists (docs/RELEASE-M5C.md) |
 | CLI name | `shakespii` | **Confirmed 2026-07-07** |
 | Score model | ~~Severity counts only vs 0–100 aggregate score~~ | **Decided 2026-07-08: severity counts only** — no research-backed weighting exists; revisit condition: M6 library ranking (M3a spec §0) |
 | Personal-skill migration | ~~Now, after M4b-2, or at M5~~ | **Decided 2026-07-09: defer to M5d** — writer + install gate are the migration tooling; the kickoff-clone collapse is validated with TR02; the live-compress evals sync travels with it (live corpus stays read-only until then) |

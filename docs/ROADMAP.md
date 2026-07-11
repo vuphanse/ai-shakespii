@@ -101,7 +101,13 @@ Commit range: dda62e3..271220c (specs/plan + 9 task commits + 2 CI fixes + relea
 
 ## M5d — Personal-skill migration
 
-- [ ] Personal-skill migration (decided 2026-07-09): run the 13 personal skills through the audit loop, collapse the 5 kickoff clones into one parameterized skill (triggers validated with TR02), and sync the repaired compress evals into the live skill (after the CALIBRATION-M4B1 eval rewordings are adjudicated). The dogfood corpus at `~/.claude/skills/` stays read-only until this lands.
+- [x] Derived-versions pass (2026-07-11, adjudicated 4-way — see docs/CALIBRATION-M5D.md): the personal corpus migrated into a new source-of-truth git repo `~/Dev/ai-skills`; 7 skills derived at v0.1.0 (anatomy restructure, evals + trigger sets, lint 0 problems, deterministic PASS) and gate-installed via `shakespii install --force`
+- [x] Kickoff-clone collapse: the measured XS02 cluster (4 clones — bugfix/deliberation/ralph/sdd; quick-task stayed out per the 2026-07-09 threshold decision) collapsed into parameterized `ai-whisper-workflow`, validated live with TR02 before the swap: 17/20 = 0.85 first measurement, gate ≥0.8 passed
+- [x] Cleanup (user-decided 2026-07-11): compress and find-skills deleted from both roots — this retires the planned live-compress evals sync (the skill no longer exists); the CALIBRATION-M4B1 rewordings adjudication is moot
+- [x] Live corpus end state: **0 errors / 1 adjudicated XS01 warning** (was 63/67); corpus write-governance shifts from "read-only until M5d" to "changes land only through the gate from ~/Dev/ai-skills"
+- [ ] Parked from the pass (need user approval + re-run each): ai-whisper-workflow eval fixes (impossible-premise eval 3, tolerant-wording eval 1), trigger-set slash-form replacement (raw `/aiw-*` queries are unmeasurable — CLI intercepts leading-`/` input), description scope clause for the dashboard-debugging near-miss; optional live sweeps for the other six derived skills
+
+M5d heading status: **done 2026-07-11** (parked items are follow-ups, not blockers).
 
 ## M6 — Curated library
 

@@ -47,7 +47,7 @@ Locked contracts — changing any of these requires an explicit user decision, n
 
 ## Live Corpus & Harness Safety
 
-- The dogfood corpus (`~/.claude/skills/` and the superpowers plugin cache) is **read-only** until the M5d migration. Gate-installs of new skills at the user's request are the exception; never mutate existing installed skills.
+- The dogfood corpus (`~/.claude/skills/`) migrated at M5d (2026-07-11): its source of truth is the user's personal skills repo `~/Dev/ai-skills`, and live copies change **only** via `shakespii install --force` from there — never hand-edit an installed skill. The superpowers plugin cache remains read-only.
 - Tests never touch real provider directories (inject a temp `HOME` or explicit `--target`) and never spawn a real `claude`; the suite must stay hermetic (CI carries no API key).
 - The LLM stages (`test --run`, `--triggers`, `bench`) spawn headless sessions with `--dangerously-skip-permissions` in disposable workspaces — trusted skills only. Containment is convention, not a sandbox (`docs/HARNESS.md`): run live sweeps on a clean tree and check `git status` plus both doc roots for strays afterward.
 - Never point the LLM stages at untrusted third-party skills.

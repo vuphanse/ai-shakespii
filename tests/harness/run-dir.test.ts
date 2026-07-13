@@ -13,11 +13,15 @@ import {
   runDir,
   runKey,
   skillContentHash,
+  skillRoutingHash,
   suiteKey,
   triggerKey,
 } from '../../src/lib/harness/run-dir'
 
 const SKILL_MD = ['---', 'name: hash-me', 'description: "Use when hashing."', '---', '# hash-me', '', 'Body.'].join('\n')
+const SKILL_MD_VERSIONED = ['---', 'name: hash-me', 'description: "Use when hashing."', 'version: 1.2.3', '---', '# hash-me', '', 'Body.'].join('\n')
+const SKILL_MD_RENAMED = ['---', 'name: hash-you', 'description: "Use when hashing."', '---', '# hash-me', '', 'Body.'].join('\n')
+const SKILL_MD_REDESCRIBED = ['---', 'name: hash-me', 'description: "Use when describing."', '---', '# hash-me', '', 'Body.'].join('\n')
 
 function makeSkill(mutate?: (dir: string) => void): string {
   const dir = mkdtempSync(join(tmpdir(), 'shakespii-rundir-'))
@@ -120,7 +124,45 @@ test('RUN_CACHE_VERSION epoch 2 leads every key formula; HARNESS_SCHEMA_VERSION 
   const hex16 = (s: string) => createHash('sha256').update(s).digest('hex').slice(0, 16)
   expect(runKey({ skillHash, evalId: 1, model: 'sonnet' })).toBe(hex16(`2\n${skillHash}\n1\nsonnet`))
   const qHash = createHash('sha256').update('Query one.').digest('hex')
-  expect(triggerKey({ skillHash, query: 'Query one.', rep: 1, model: 'sonnet' })).toBe(hex16(`2\n${skillHash}\ntrigger\n${qHash}\n1\nsonnet`))
+  expect(triggerKey({ skillHash, query: 'Query one.', rep: 1, model: 'sonnet' })).toBe(hex16(`2\n${skillHash}\ntrigger:nd\n${qHash}\n1\nsonnet`))
   expect(benchKey({ skillHash, evalId: 1, config: 'with_skill', runNumber: 1, model: 'sonnet' })).toBe(hex16(`2\n${skillHash}\n1\nwith_skill\n1\nsonnet`))
   expect(suiteKey({ skillHash, model: 'sonnet', runs: 3 })).toBe(hex16(`2\n${skillHash}\nbench-suite\nsonnet\n3`))
+})
+
+test('skillRoutingHash: stable under body, version, eval, fixture, and triggers edits', () => {
+  const base = skillRoutingHash(parseSkill(makeSkill()))
+  expect(base).toMatch(/^[0-9a-f]{64}$/)
+  const variants = [
+    makeSkill(d => writeFileSync(join(d, 'SKILL.md'), SKILL_MD + '\nMore body.')),
+    makeSkill(d => writeFileSync(join(d, 'SKILL.md'), SKILL_MD_VERSIONED)),
+    makeSkill(d => writeFileSync(join(d, 'evals/evals.json'), '{"skill_name":"hash-me","evals":[1]}')),
+    makeSkill(d => writeFileSync(join(d, 'blob.bin'), Buffer.from([9, 9, 9, 9]))),
+    makeSkill(d => writeFileSync(join(d, 'evals/triggers.json'), '{"skill_name":"hash-me","queries":[]}')),
+  ]
+  for (const dir of variants) expect(skillRoutingHash(parseSkill(dir))).toBe(base)
+})
+
+test('skillRoutingHash: name or description edits change it', () => {
+  const base = skillRoutingHash(parseSkill(makeSkill()))
+  expect(skillRoutingHash(parseSkill(makeSkill(d => writeFileSync(join(d, 'SKILL.md'), SKILL_MD_RENAMED))))).not.toBe(base)
+  expect(skillRoutingHash(parseSkill(makeSkill(d => writeFileSync(join(d, 'SKILL.md'), SKILL_MD_REDESCRIBED))))).not.toBe(base)
+})
+
+test('skillRoutingHash: NUL separator keeps name/description boundaries distinct', () => {
+  const md = (name: string, description: string) => ['---', `name: ${name}`, `description: "${description}"`, '---', '# x'].join('\n')
+  const a = skillRoutingHash(parseSkill(makeSkill(d => writeFileSync(join(d, 'SKILL.md'), md('ab', 'c')))))
+  const b = skillRoutingHash(parseSkill(makeSkill(d => writeFileSync(join(d, 'SKILL.md'), md('a', 'bc')))))
+  expect(a).not.toBe(b)
+})
+
+test('skillRoutingHash: throws when frontmatter name or description is missing', () => {
+  const noDesc = makeSkill(d => writeFileSync(join(d, 'SKILL.md'), ['---', 'name: hash-me', '---', '# hash-me'].join('\n')))
+  expect(() => skillRoutingHash(parseSkill(noDesc))).toThrow('internal: skillRoutingHash requires frontmatter name and description')
+})
+
+test('triggerKey keyspace is disjoint from the legacy "trigger" tag scheme', () => {
+  const skillHash = 'a'.repeat(64)
+  const qHash = createHash('sha256').update('Query one.').digest('hex')
+  const legacy = createHash('sha256').update(`2\n${skillHash}\ntrigger\n${qHash}\n1\nsonnet`).digest('hex').slice(0, 16)
+  expect(triggerKey({ skillHash, query: 'Query one.', rep: 1, model: 'sonnet' })).not.toBe(legacy)
 })

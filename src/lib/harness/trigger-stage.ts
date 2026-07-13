@@ -6,7 +6,7 @@ import type { ParsedSkill } from '../types'
 import type { ClaudeRunner } from './claude-runner'
 import { RUN_TIMEOUT_MS } from './claude-runner'
 import { contaminationMessage, readPersistedEvents, scanContamination } from './contamination'
-import { runDir, skillContentHash, triggerKey } from './run-dir'
+import { runDir, skillRoutingHash, triggerKey } from './run-dir'
 import { renderTranscript } from './stream-json'
 import type { HarnessFinding, StageReport, TriggerRunMeta } from './types'
 
@@ -28,7 +28,7 @@ export interface TriggerStageOptions {
   fresh: boolean
 }
 
-/** Wipes and recreates the rep dir, mounts the skill (no eval files, no preamble), returns outputs/. */
+/** Wipes and recreates the rep dir, mounts the full skill (SKILL.md plus every inventory file; no per-case fixture staging, no force-load preamble), returns outputs/. */
 export function stageTriggerRunDir(skill: ParsedSkill, skillName: string, dir: string): string {
   rmSync(dir, { recursive: true, force: true })
   const outputs = join(dir, 'outputs')
@@ -43,8 +43,14 @@ export function stageTriggerRunDir(skill: ParsedSkill, skillName: string, dir: s
   return outputs
 }
 
-/** Cache gate: trigger.json exists, parses, and query/shouldTrigger match verbatim. Anything else is a self-healing miss. */
-export function readValidCachedTrigger(dir: string, query: string, shouldTrigger: boolean): { triggered: boolean } | null {
+/**
+ * Cache gate: trigger.json exists, parses, its query matches verbatim, and
+ * triggered is a boolean. The stored shouldTrigger is write-time provenance,
+ * not validity — the observation ("did the model invoke the skill") is
+ * expectation-independent and is re-scored against the current triggers.json
+ * label. Anything else is a self-healing miss.
+ */
+export function readValidCachedTrigger(dir: string, query: string): { triggered: boolean } | null {
   const p = join(dir, 'trigger.json')
   if (!existsSync(p)) return null
   let doc: unknown
@@ -54,7 +60,7 @@ export function readValidCachedTrigger(dir: string, query: string, shouldTrigger
     return null
   }
   if (!isRecord(doc)) return null
-  if (doc.query !== query || doc.shouldTrigger !== shouldTrigger) return null
+  if (doc.query !== query) return null
   if (typeof doc.triggered !== 'boolean') return null
   return { triggered: doc.triggered }
 }
@@ -85,7 +91,7 @@ export async function runTriggerStage(skill: ParsedSkill, options: TriggerStageO
   }
 
   const skillName = evalsDoc.skill_name
-  const skillHash = skillContentHash(skill)
+  const skillHash = skillRoutingHash(skill)
   const findings: HarnessFinding[] = []
   const runs: TriggerRunMeta[] = []
   let passed = 0
@@ -103,7 +109,7 @@ export async function runTriggerStage(skill: ParsedSkill, options: TriggerStageO
       const dir = runDir(options.cacheRoot, skillName, key)
 
       if (!options.fresh) {
-        const hit = readValidCachedTrigger(dir, query, should_trigger)
+        const hit = readValidCachedTrigger(dir, query)
         if (hit !== null) {
           reps += 1
           cached += 1

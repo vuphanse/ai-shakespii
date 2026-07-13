@@ -124,9 +124,9 @@ test('cache: second run replays with zero runner calls and an identical report',
 test('fidelity mismatch self-heals: edited query text re-runs', async () => {
   const a = makeSkill(queries([{ t: true }]))
   await runTriggerStage(a.skill, opts(fakeRunner([detected(true), detected(true), detected(true)]), a.cacheRoot))
-  // Same skill bytes, same cacheRoot, but a triggers.json whose query text changed
-  // would change skillHash too (the file is in the inventory) — so simulate fidelity
-  // corruption instead: tamper the cached trigger.json's stored query text.
+  // triggers.json edits no longer change the cache key (routing-scoped hash),
+  // so simulate fidelity corruption directly: tamper the cached trigger.json's
+  // stored query text and confirm exactly that rep self-heals.
   // Locate the rep-1 trigger.json under the cache and corrupt it:
   const skillName = 'demo-skill'
   const runsRoot = join(a.cacheRoot, 'runs', skillName)
@@ -205,4 +205,46 @@ test('trigger contamination recomputes from disk on cached reps (empty-script ru
   const replay = await runTriggerStage(skill, opts(fakeRunner([]), cacheRoot))
   expect(replay.runs[0].cached).toBe(TRIGGER_REPS)
   expect(replay.findings.filter(f => f.severity === 'warn')).toHaveLength(1)
+})
+
+test('cache scope: eval-file edits replay from cache; description edits re-buy', async () => {
+  const a = makeSkill(queries([{ t: true }]))
+  await runTriggerStage(a.skill, opts(fakeRunner([detected(true), detected(true), detected(true)]), a.cacheRoot))
+
+  // Eval edit — the previously re-buying case: reword an eval prompt, re-parse, replay.
+  writeFileSync(
+    join(a.skill.dir, 'evals/evals.json'),
+    JSON.stringify({ ...EVALS_DOC, evals: [{ ...EVALS_DOC.evals[0], prompt: 'Case one, reworded.' }, ...EVALS_DOC.evals.slice(1)] }),
+  )
+  const replayRunner = fakeRunner([])
+  const replay = await runTriggerStage(parseSkill(a.skill.dir), opts(replayRunner, a.cacheRoot))
+  expect(replayRunner.requests).toHaveLength(0)
+  expect(replay.runs[0].cached).toBe(3)
+
+  // Description edit — a routing input: full re-buy.
+  writeFileSync(
+    join(a.skill.dir, 'SKILL.md'),
+    '---\nname: demo-skill\ndescription: Use when testing routing-scoped cache keys.\nversion: 1.0.0\n---\n\n# Demo\n',
+  )
+  const rebuyRunner = fakeRunner([detected(true), detected(true), detected(true)])
+  const rebuy = await runTriggerStage(parseSkill(a.skill.dir), opts(rebuyRunner, a.cacheRoot))
+  expect(rebuyRunner.requests).toHaveLength(3)
+  expect(rebuy.runs[0].cached).toBe(0)
+})
+
+test('label flip: should_trigger edits replay cached observations and re-score against the new expectation', async () => {
+  const a = makeSkill(queries([{ t: true }]))
+  const first = await runTriggerStage(a.skill, opts(fakeRunner([detected(true), detected(true), detected(true)]), a.cacheRoot))
+  expect(first.status).toBe('pass')
+
+  writeFileSync(join(a.skill.dir, 'evals/triggers.json'), JSON.stringify(queries([{ t: false }])))
+  const flipRunner = fakeRunner([])
+  const flipped = await runTriggerStage(parseSkill(a.skill.dir), opts(flipRunner, a.cacheRoot))
+  expect(flipRunner.requests).toHaveLength(0)
+  expect(flipped.runs[0]).toEqual({ queryIndex: 0, shouldTrigger: false, triggered: 3, reps: 3, cached: 3, status: 'ok' })
+  // Re-scored under the new expectation: rate 1.0 ≥ 0.5 on a negative → query fails → accuracy 0/1.
+  expect(flipped.status).toBe('fail')
+  expect(flipped.findings).toEqual([
+    { severity: 'error', message: 'trigger accuracy 0.00 below threshold 0.8 (0/1 queries)', file: 'evals/triggers.json', line: null },
+  ])
 })

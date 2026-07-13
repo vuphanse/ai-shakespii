@@ -38,6 +38,25 @@ export function skillContentHash(skill: ParsedSkill): string {
   return h.digest('hex')
 }
 
+/**
+ * sha256 over frontmatter `name` + NUL + `description` — the only inputs that
+ * influence skill routing in a trigger session: pre-invocation the model sees
+ * only the picker entry built from them. Body, version, and eval files are
+ * invisible until after the routing decision, so they must not invalidate
+ * trigger caches. Callers run behind the trigger stage's deterministic-clean
+ * precondition (both fields exist and are non-empty); throw rather than hash
+ * emptiness if that ever breaks.
+ */
+export function skillRoutingHash(skill: ParsedSkill): string {
+  const fm = skill.frontmatter.parsed
+  const name = fm?.name
+  const description = fm?.description
+  if (typeof name !== 'string' || name.length === 0 || typeof description !== 'string' || description.length === 0) {
+    throw new Error('internal: skillRoutingHash requires frontmatter name and description')
+  }
+  return createHash('sha256').update(name).update('\0').update(description).digest('hex')
+}
+
 export function runKey(input: { skillHash: string; evalId: number; model: string }): string {
   return createHash('sha256')
     .update(`${RUN_CACHE_VERSION}\n${input.skillHash}\n${input.evalId}\n${input.model}`)
@@ -47,9 +66,10 @@ export function runKey(input: { skillHash: string; evalId: number; model: string
 
 const sha256hex = (s: string): string => createHash('sha256').update(s).digest('hex')
 
+/** Stage tag 'trigger:nd' (name+description scoping, 2026-07-13) — disjoint by construction from the legacy full-content 'trigger' keyspace. */
 export function triggerKey(input: { skillHash: string; query: string; rep: number; model: string }): string {
   return createHash('sha256')
-    .update(`${RUN_CACHE_VERSION}\n${input.skillHash}\ntrigger\n${sha256hex(input.query)}\n${input.rep}\n${input.model}`)
+    .update(`${RUN_CACHE_VERSION}\n${input.skillHash}\ntrigger:nd\n${sha256hex(input.query)}\n${input.rep}\n${input.model}`)
     .digest('hex')
     .slice(0, 16)
 }

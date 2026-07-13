@@ -223,8 +223,9 @@ any LLM call — `queries: {passed: 0, total: 0}`, `runs: []`.
 `TRIGGER_REPS = 3`, `TRIGGER_PASS_THRESHOLD = 0.5`,
 `TRIGGER_ACCURACY_THRESHOLD = 0.8`. For each query (in document order):
 run up to 3 reps, each cache-checked independently via `triggerKey`; a
-live rep stages a run dir (skill mounted at
-`outputs/.claude/skills/<skill_name>/SKILL.md`, no eval `files`, no
+live rep stages a run dir (the full skill directory — SKILL.md plus every
+inventory file, evals included — mounted at
+`outputs/.claude/skills/<skill_name>/`; no per-case fixture staging, no
 force-load preamble — the prompt is the query verbatim, because injecting
 a preamble would defeat the measurement) and calls the runner with
 `detect: { skillName }` (see Runner detect mode below). Per query: `rate =
@@ -247,15 +248,27 @@ its partial `triggered`/`reps`/`cached` counts and `status` ∈
 evidence the skill "didn't trigger" — it is never folded into the
 fired/not-fired tally.
 
-**`triggerKey` and cache.** `triggerKey({skillHash, query, rep, model}) =`
-first 16 hex of `sha256("2\n<skillHash>\ntrigger\n<sha256hex(query)>\n<rep>\n<model>")`
-— the leading `2` is `RUN_CACHE_VERSION` (see Run-dir and cache below); the
-query text itself is pre-hashed before being embedded, keeping the
-key formula's outer structure stable regardless of query length. Cache
-gate (`readValidCachedTrigger`): `trigger.json` must exist, parse, and its
-`query`/`shouldTrigger` must match the current query verbatim, with
-`triggered` a boolean — anything else is a self-healing miss (same pattern
-as `grading.json`).
+**`triggerKey` and cache.** The trigger stage keys on ROUTING inputs, not
+full content: `skillRoutingHash` = sha256 of frontmatter `name` + NUL +
+`description`, the only inputs the model sees before deciding to invoke
+(the picker entry). `triggerKey({skillHash, query, rep, model})` = first
+16 hex of
+`sha256("2\n<skillRoutingHash>\ntrigger:nd\n<sha256hex(query)>\n<rep>\n<model>")`
+— the leading `2` is `RUN_CACHE_VERSION` (see Run-dir and cache below),
+and the `trigger:nd` tag keeps this keyspace disjoint from the legacy
+full-content `trigger` scheme (superseded 2026-07-13 with NO version bump:
+scenario/bench keys keep `skillContentHash` because those sessions read
+the whole mounted skill; old trigger dirs stay on disk, ignored; every
+skill re-buys its matrix once under the new scheme). Body edits, `version`
+bumps, and eval-suite edits therefore replay trigger caches; only
+`name`/`description` edits re-buy. Cache gate (`readValidCachedTrigger`):
+`trigger.json` must exist, parse, its `query` must match the current query
+verbatim, and `triggered` must be a boolean — anything else is a
+self-healing miss (same pattern as `grading.json`). The stored
+`shouldTrigger` is write-time provenance only: the observation is
+expectation-independent, so flipping a query's `should_trigger` label
+replays the cached observation and merely re-scores it against the new
+expectation.
 
 **Artifacts.** `<cacheRoot>/runs/<skillName>/<triggerKey>/` holds
 `events.jsonl` (raw stream-json), `transcript.md`, and `trigger.json`

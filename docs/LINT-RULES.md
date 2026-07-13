@@ -95,6 +95,7 @@ its body range. Both require `--corpus`; both count once in summaries.
 |---|---|---|---|
 | TR01 | warn | Skill ships `evals/evals.json` with ≥3 cases (skill-creator schema), fixtures resolving relative to the skill dir | Anthropic "minimum three evaluations"; compress's fixtures break because they don't resolve relative to the skill |
 | TR02 | warn | Trigger-accuracy query set present and well-formed: `evals/triggers.json` with ≥16 labeled queries including near-miss negatives (options `{ minQueries: 16 }`). Measured accuracy runs under `shakespii test --run --triggers` (skill-creator run_eval.py defaults: 3 reps/query, trigger threshold 0.5 = majority rule, accuracy threshold 0.8) | skill-creator `run_eval.py` + adjudication 2026-07-09 (measure-only — the earlier "pass threshold on held-out split" wording described the retired optimizer design; description optimization moves to the M5 writer) |
+| TR03 | warn | No leading-"/" trigger queries: `query.trimStart()` starting with `/` is CLI-intercepted before the model sees it, so the query is unmeasurable by the trigger stage. Queries only — positive and negative alike; descriptions may legitimately document /-forms and are never inspected | Measured M5d (2026-07-11): /-prefixed kickoff queries fired 0/3 while $-prefixed equivalents fired 3/3; only the harness measurement path is blind to /-forms |
 
 ## Seed set for MVP
 
@@ -136,3 +137,12 @@ trigger accuracy is a separate concern, living in `shakespii test --run
 --triggers` (docs/HARNESS.md, "Trigger stage"); `shakespii bench` shipped
 alongside it as an independent subcommand (docs/HARNESS.md, "Bench").
 Calibration: docs/CALIBRATION-M4B2.md.
+
+**M5d follow-up (2026-07-13):** TR03 is implemented and live — warn, static
+and tokenless, single finding per skill enumerating offending query indices,
+gated behind TR02's validity checks (missing/unparsable/schema-invalid
+suites stay TR02's findings; no duplicates). Flags
+`query.trimStart().startsWith('/')` on positive and negative queries alike;
+never inspects descriptions. Profile pin: `TR03: warn`
+(`profiles/default.yaml`). Design:
+docs/specs/2026-07-12-trigger-cache-scope-tr03-design.md.

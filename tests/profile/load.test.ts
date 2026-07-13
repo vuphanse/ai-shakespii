@@ -6,13 +6,13 @@ import { loadProfile, mergeProfile, resolveRule } from '../../src/lib/profile/lo
 const PROFILE_PATH = join(import.meta.dir, '../../profiles/default.yaml')
 const LINT_RULES_PATH = join(import.meta.dir, '../../docs/LINT-RULES.md')
 
-test('loads the real default profile: 7 anatomy sections, 28 rules', () => {
+test('loads the real default profile: 7 anatomy sections, 29 rules', () => {
   const p = loadProfile(PROFILE_PATH)
   expect(p.profile).toBe('default')
   expect(Object.keys(p.anatomy)).toEqual([
     'intent', 'inputs', 'preconditions', 'procedure', 'output', 'examples', 'anti-patterns',
   ])
-  expect(Object.keys(p.rules).length).toBe(28)
+  expect(Object.keys(p.rules).length).toBe(29)
 })
 
 test('rule-ID parity with LINT-RULES.md (replaces the M1 ephemeral check)', () => {

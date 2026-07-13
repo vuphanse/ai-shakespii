@@ -74,5 +74,6 @@ rules:
   # TR — trigger & eval (harness-backed)
   TR01: { severity: warn, options: { minCases: 3 } }
   TR02: { severity: warn, options: { minQueries: 16 } }
+  TR03: warn                  # leading-"/" queries are CLI-intercepted before the model — unmeasurable (M5d)
   # PH — placeholders
   PH01: { severity: error, options: { token: "TODO(shakespii):" } }

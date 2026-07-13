@@ -27,6 +27,11 @@ runs up to four stages, always in this order: `deterministic`, `scenario`,
   scenario/grading (and trigger, if `--triggers` is set) report
   `status: "skipped", note: "deterministic stage failed"` — an invalid
   suite never burns tokens. Deterministic warnings alone do not block.
+- The deterministic stage validates the eval suite AND the skill's routing
+  frontmatter: `name` and `description` must be non-empty strings (FM01
+  semantics; error findings on `SKILL.md`). This enforces the precondition
+  the LLM stages rely on — `skillRoutingHash` keys trigger caches on those
+  two fields, so a skill that reaches an LLM stage always has them.
 - `--fresh`, `--model`, and `--triggers` all require `--run` (usage error,
   exit 2, otherwise).
 - The `trigger` stage only appears in the report at all when `--triggers`

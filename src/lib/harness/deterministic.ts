@@ -6,21 +6,42 @@ const EVALS = 'evals/evals.json'
 const MIN_CASES = 3
 
 const err = (message: string): HarnessFinding => ({ severity: 'error', message, file: EVALS, line: null })
+const fmErr = (message: string): HarnessFinding => ({ severity: 'error', message, file: 'SKILL.md', line: null })
+
+/**
+ * Routing-frontmatter gate: the LLM stages depend on frontmatter `name` and
+ * `description` (skillRoutingHash keys trigger caches on them), and the
+ * documented precondition everywhere is that deterministic-clean guarantees
+ * both. Enforce it here so a malformed skill fails this stage with a finding
+ * instead of crashing an internal invariant later. Same non-empty-string
+ * semantics as lint's FM01.
+ */
+function routingFrontmatterFindings(skill: ParsedSkill): HarnessFinding[] {
+  const out: HarnessFinding[] = []
+  for (const field of ['name', 'description']) {
+    const v = skill.frontmatter.parsed?.[field]
+    if (typeof v !== 'string' || v.trim() === '') {
+      out.push(fmErr(`frontmatter ${field} must be a non-empty string — the harness requires routing frontmatter (see FM01)`))
+    }
+  }
+  return out
+}
 
 export function runDeterministic(skill: ParsedSkill): HarnessFinding[] {
+  const fm = routingFrontmatterFindings(skill)
   const entry = skill.files.find(f => f.relPath === EVALS)
   if (!entry) {
-    return [err('no evals/evals.json — author evals first (see TR01); shakespii test requires a reproducible eval suite')]
+    return [...fm, err('no evals/evals.json — author evals first (see TR01); shakespii test requires a reproducible eval suite')]
   }
-  if (entry.text === null) return [err('evals/evals.json is not readable as UTF-8 text')]
+  if (entry.text === null) return [...fm, err('evals/evals.json is not readable as UTF-8 text')]
   let doc: unknown
   try {
     doc = JSON.parse(entry.text)
   } catch (e) {
-    return [err(`evals/evals.json is not valid JSON: ${(e as Error).message}`)]
+    return [...fm, err(`evals/evals.json is not valid JSON: ${(e as Error).message}`)]
   }
   const diagnostics = validateEvalsJson(doc)
-  const out: HarnessFinding[] = diagnostics.map(d => err(`${d.path}: ${d.message}`))
+  const out: HarnessFinding[] = [...fm, ...diagnostics.map(d => err(`${d.path}: ${d.message}`))]
   if (isRecord(doc)) {
     const fmName = skill.frontmatter.parsed?.['name']
     if (typeof doc.skill_name === 'string' && doc.skill_name.length > 0 && typeof fmName === 'string' && doc.skill_name !== fmName) {

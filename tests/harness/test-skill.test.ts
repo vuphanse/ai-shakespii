@@ -108,6 +108,22 @@ test('testSkill without triggers: three stages exactly (frozen surface)', async 
   expect(result.stages).toHaveLength(3)
 })
 
+test('regression: --run --triggers on a skill missing description fails deterministically, never crashes', async () => {
+  // Pre-fix, this exact input passed the deterministic stage and then threw
+  // 'internal: skillRoutingHash requires frontmatter name and description'
+  // from the trigger stage (CLI exit 2).
+  const dir = mkdtempSync(join(tmpdir(), 'shakespii-test-skill-nodesc-'))
+  writeFileSync(join(dir, 'SKILL.md'), '---\nname: demo-skill\nversion: 1.0.0\n---\n\n# Demo\n')
+  mkdirSync(join(dir, 'evals'), { recursive: true })
+  writeFileSync(join(dir, 'evals/evals.json'), JSON.stringify(TRIGGER_SKILL_EVALS_DOC))
+  writeFileSync(join(dir, 'evals/triggers.json'), JSON.stringify({ skill_name: 'demo-skill', queries: [{ query: 'Trigger query.', should_trigger: true }] }))
+  const runner = fakeRunner([])
+  const result = await testSkill(parseSkill(dir), { run: true, triggers: true, runner, cacheRoot: mkdtempSync(join(tmpdir(), 'sk-')) })
+  expect(result.stages[0]).toMatchObject({ stage: 'deterministic', status: 'fail' })
+  expect(result.stages[3]).toEqual({ stage: 'trigger', status: 'skipped', note: 'deterministic stage failed' })
+  expect(runner.requests).toHaveLength(0)
+})
+
 test('testSkill with triggers but failing deterministic: trigger skipped', async () => {
   const result = await testSkill(parseSkill(NO_EVALS), {
     run: true,

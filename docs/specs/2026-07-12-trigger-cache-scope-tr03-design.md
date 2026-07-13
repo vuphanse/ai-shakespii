@@ -86,9 +86,16 @@ remain.
 
 Safety argument: the trigger stage's documented precondition is a
 deterministic-clean skill, which guarantees `name` and `description` exist and
-are non-empty before any key is computed. If a future harness change surfaces
-additional frontmatter to routing, that is an executor-semantics change and
-takes the existing `RUN_CACHE_VERSION` bump path.
+are non-empty before any key is computed. **Post-review amendment
+(2026-07-13):** the deterministic stage did not originally enforce this — a
+skill with a valid eval suite but missing/empty routing frontmatter passed it
+and crashed the routing hash with an internal error. `runDeterministic` now
+carries a routing-frontmatter gate (FM01 semantics: both fields non-empty
+strings; error findings on `SKILL.md`), making the guarantee real: a skill
+that reaches any LLM stage always has routing frontmatter. If a future
+harness change surfaces additional frontmatter to routing, that is an
+executor-semantics change and takes the existing `RUN_CACHE_VERSION` bump
+path.
 
 ## 3. Design — TR03 lint rule (unmeasurable trigger queries)
 

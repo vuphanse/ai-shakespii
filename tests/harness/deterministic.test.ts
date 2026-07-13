@@ -5,6 +5,8 @@ import { testSkill } from '../../src/lib/harness'
 import { cleanSkillRaw, skillFromRaw } from '../helpers/skill'
 
 const MISSING_MSG = 'no evals/evals.json — author evals first (see TR01); shakespii test requires a reproducible eval suite'
+const NAME_MSG = 'frontmatter name must be a non-empty string — the harness requires routing frontmatter (see FM01)'
+const DESC_MSG = 'frontmatter description must be a non-empty string — the harness requires routing frontmatter (see FM01)'
 
 const evalsEntry = (doc: unknown): FileEntry => {
   const text = JSON.stringify(doc, null, 2)
@@ -63,10 +65,30 @@ test('skill_name mismatch: cross-document error', () => {
   ])
 })
 
-test('skill_name check is skipped when frontmatter has no parseable name', () => {
+test('missing frontmatter name: routing-frontmatter error; the skill_name mismatch check does not also fire', () => {
   const raw = ['---', 'description: "Use when testing."', '---', '# x', '', 'Body.'].join('\n')
   const skill = skillFromRaw(raw, [evalsEntry(validDoc('whatever'))])
-  expect(runDeterministic(skill)).toEqual([])
+  expect(runDeterministic(skill)).toEqual([
+    { severity: 'error', message: NAME_MSG, file: 'SKILL.md', line: null },
+  ])
+})
+
+test('missing frontmatter description: routing-frontmatter error even with a valid eval suite', () => {
+  const raw = ['---', 'name: test-skill', '---', '# x', '', 'Body.'].join('\n')
+  const skill = skillFromRaw(raw, [evalsEntry(validDoc())])
+  expect(runDeterministic(skill)).toEqual([
+    { severity: 'error', message: DESC_MSG, file: 'SKILL.md', line: null },
+  ])
+})
+
+test('routing frontmatter: empty name and empty description each error, reported before eval findings', () => {
+  const raw = ['---', 'name: ""', 'description: "  "', '---', '# x'].join('\n')
+  const skill = skillFromRaw(raw)
+  expect(runDeterministic(skill)).toEqual([
+    { severity: 'error', message: NAME_MSG, file: 'SKILL.md', line: null },
+    { severity: 'error', message: DESC_MSG, file: 'SKILL.md', line: null },
+    { severity: 'error', message: MISSING_MSG, file: 'evals/evals.json', line: null },
+  ])
 })
 
 test('files entries: escape and not-found are separate errors, in case order', () => {

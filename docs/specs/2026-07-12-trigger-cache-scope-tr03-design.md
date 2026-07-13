@@ -47,6 +47,16 @@ Changes:
   read the whole mounted skill, so full-content scoping is correct there.
 - The stage tag inside `triggerKey` changes from `'trigger'` to
   `'trigger:nd'`, making old and new keyspaces disjoint by construction.
+- **Cache fidelity gate revision**: `readValidCachedTrigger` stops comparing
+  the cached `shouldTrigger` against the current expectation. The cached
+  observation — "did the model invoke the skill" — is expectation-independent,
+  so the gate verifies only that `query` matches verbatim and `triggered` is a
+  boolean. `trigger.json` keeps recording the `shouldTrigger` in force at
+  write time as provenance, but the field no longer participates in cache
+  validity: the verdict is always computed by applying the current
+  triggers.json expectation to the cached observation. Without this revision,
+  flipping a query's `should_trigger` label would re-run all 3 reps even
+  though the measured bit cannot change.
 - **No `RUN_CACHE_VERSION` bump.** Executor session semantics are unchanged;
   scenario/bench caches stay valid. Orphaned old trigger run dirs stay on disk,
   ignored — the documented behavior for superseded cache entries.
@@ -57,9 +67,12 @@ Changes:
 Consequences:
 
 - Free (trigger cache preserved): body edits, `version` bumps, evals.json /
-  fixture / triggers-expectation edits. In particular the parked
-  deliberation-craft anti-pattern body edit and all version-continuity bumps
-  from the skill-ownership migration no longer re-buy trigger matrices.
+  fixture edits, and triggers.json expectation (label) flips — the last
+  replay cached observations and are merely re-scored under the current
+  expectation, which is what the fidelity-gate revision buys. In particular
+  the parked deliberation-craft anti-pattern body edit and all
+  version-continuity bumps from the skill-ownership migration no longer
+  re-buy trigger matrices.
 - Expensive (trigger cache invalidated — correctly): `name` or `description`
   edits, the inputs trigger accuracy actually measures.
 - One-time cost: every skill re-buys its trigger matrix on its next
@@ -108,13 +121,27 @@ Item 2 (`test` coverage for run-dir + trigger-stage):
 - Trigger-stage cache behavior: a cached `trigger.json` written under the new
   key is reused after an eval-file edit (the previously re-buying case), and
   is not reused after a description edit.
+- Label-flip replay: seed a cached trigger matrix, flip one query's
+  `should_trigger` in triggers.json, and re-run the stage — the runner
+  receives zero calls (every rep served from cache) and the flipped query's
+  verdict is scored against the new expectation.
 
 Item 3 (rule tests following the existing per-rule test pattern):
 
 - Clean suite (prose + `$`-prefixed queries) produces no findings.
 - Suite with leading-`/` queries produces one warn finding enumerating the
-  right indices (including a whitespace-prefixed `/` case).
+  right indices (including a whitespace-prefixed `/` case). The offending
+  queries include one `should_trigger: true` and one `should_trigger: false`
+  entry, and both indices appear in the finding — pinning that both labels
+  are flagged.
+- A valid suite whose only `/` appears in the frontmatter `description`
+  produces no findings (the description boundary in §3).
 - Missing or invalid triggers.json produces no TR03 findings.
+- Default-profile integration: `runRules` with the default profile over a
+  fixture skill containing one leading-`/` query yields exactly one TR03
+  finding with severity `warn`. This pins registration in `rules/index.ts`
+  and the default profile — a gap the per-rule unit tests cannot see, since
+  they invoke the rule directly.
 
 ## 5. Documentation
 

@@ -183,6 +183,14 @@ approved spec):
   total); title "four anchored cases" → "three"; exact pins
   `toHaveLength(3)` and ids exactly `[1, 2, 3]`; version pin `0.1.0` →
   `0.2.0`.
+- authoring-skills, fixture guard: the weld test's parsed eval type gains
+  `files`, and a targeted assertion pins the eval-3 fixture contract —
+  eval 3 declares a non-empty `files` list and every listed path exists
+  and is non-empty under the skill directory. This pin is load-bearing:
+  deterministic validation accepts an omitted `files` field
+  (`src/lib/harness/deterministic.ts` validates fixture paths only when
+  declared), so without it the required fixture could disappear while
+  every other stated check still passed.
 
 Assertion forms end up strictly stronger than before (exact counts and id
 sequences instead of floors + uniqueness; same shape checks, same anchor
@@ -191,6 +199,14 @@ mechanism, same exact-count trigger pins). Tests stay hermetic — no live
 
 ## 4. Verification and closure
 
+**Binary discipline for every step below:** all shakespii commands run
+through the checkout entrypoint — `bun src/cli/index.ts <cmd> …` — never
+the bare `shakespii` binary. `command -v shakespii` resolves to the
+npm-installed global 0.3.1, which predates the routing-scoped trigger key
+(its trigger stage hashes full content under the legacy `trigger`
+keyspace), so it would re-buy the trigger matrices, fail step 6's replay
+expectation, and verify the wrong code entirely.
+
 Hermetic verification (AGENTS.md Verification Rules — all three, green at
 every commit, not just at the end):
 
@@ -198,13 +214,15 @@ every commit, not just at the end):
 2. `bun run typecheck` — clean.
 3. `bun run check-pack` — tarball guard clean (the bundled skills ship in
    the tarball; the eval/fixture changes must not break the layout pins).
-4. `shakespii lint` on both bundled skills — exit 0, zero findings.
+4. `bun src/cli/index.ts lint` on both bundled skills — exit 0, zero
+   findings.
 
 Live verification (harness safety per AGENTS.md: live sweeps run on a clean
 tree; containment is convention, not a sandbox):
 
 5. Precondition: `git status` clean (work committed) before any live run.
-6. `shakespii test --run --triggers` on both bundled skills — expected:
+6. `bun src/cli/index.ts test <skill-dir> --run --triggers` on both
+   bundled skills — expected:
    trigger stage fully cached replay (routing hash untouched — this run
    doubles as live confirmation of the routing-scoped trigger key), scenario
    stage re-buys ~16 LLM calls (5 + 3 evals × executor + grader), exit 0.
@@ -218,8 +236,10 @@ Closure:
 8. Install-gate resync of the two bundled live copies — both installed
    targets are occupied, and the installer refuses occupied targets without
    `--force`, so the commands are:
-   `shakespii install skills/using-shakespii --force` and
-   `shakespii install skills/authoring-skills --force` (rc=0 each), then a
+   `bun src/cli/index.ts install skills/using-shakespii --force` and
+   `bun src/cli/index.ts install skills/authoring-skills --force` (rc=0
+   each — the checkout's installer, so the gate and the installed copies
+   reflect this change, not global 0.3.1), then a
    recursive diff of each installed copy against `skills/` — clean. An edit
    loop is not closed until this resync
    (mem-2026-07-12-calibration-loops-must-end-with-re-6af190).

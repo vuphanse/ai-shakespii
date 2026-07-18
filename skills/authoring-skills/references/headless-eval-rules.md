@@ -16,9 +16,12 @@ grading. Author every case against these rules.
    message".
 4. Token-spend confirmations are pre-granted in the prompt for any eval
    whose procedure requires them.
-5. Keep at least one near-miss negative case: a prompt that resembles the
-   skill's triggers but must not engage it, with expectations asserting the
-   skill's behavior is absent.
+5. Author only in-skill behavior branches: the happy path, refusal or error
+   branches the skill itself defines, and variants (for example, resume).
+   Do not author near-miss negatives here — the harness executor force-loads
+   the skill, so a don't-use-the-skill case is structurally unmeasurable.
+   Scope discrimination belongs in `evals/triggers.json`, where the trigger
+   stage measures it.
 
 Example rewording. Before: "Confirms the plan with the user before editing."
 After (prompt gains: "The plan is approved — proceed without checking in.")

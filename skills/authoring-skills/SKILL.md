@@ -1,7 +1,7 @@
 ---
 name: authoring-skills
 description: "Use when the user asks to create, write, compose, or design a new agent skill — turning an idea, notes, requirement, or repeated workflow into a SKILL.md with eval cases and a trigger set through an interview → draft → critique → refine loop."
-version: 0.1.0
+version: 0.2.0
 ---
 
 # authoring-skills
@@ -82,8 +82,10 @@ Phase 3 — Critique. Two layers, in order:
 
 Phase 4 — Refine. Author the eval suite, then let the harness judge:
 
-1. Write `evals/evals.json` (at least three cases, one a near-miss negative)
-   following [references/headless-eval-rules.md](references/headless-eval-rules.md).
+1. Write `evals/evals.json` (at least three cases, each an in-skill
+   behavior branch — happy path, refusal or error branches, variants;
+   scope negatives belong in `evals/triggers.json`) following
+   [references/headless-eval-rules.md](references/headless-eval-rules.md).
 2. Write `evals/triggers.json` (at least sixteen labeled queries, with
    near-miss negatives on the boundary of any neighboring skill).
 3. Gate with the harness — token spend confirmed with the human, or already

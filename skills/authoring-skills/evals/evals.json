@@ -27,22 +27,13 @@
     },
     {
       "id": 3,
-      "prompt": "Lint my skill at ./skills/note-taker and fix the findings.",
-      "expected_output": "The authoring loop does not engage; this is an audit of an existing skill, so the agent fixes findings without starting an interview or creating anything new.",
-      "files": [],
+      "prompt": "Critique my draft skill at evals/fixtures/draft-skill/SKILL.md against your critique rubric, then produce a refined draft. The draft is known to be rough — name its concrete weaknesses first, then rewrite it. You have my approval to proceed without questions; do not install anything.",
+      "expected_output": "The agent critiques the draft against the rubric, names its concrete weaknesses (at least the first-person vague description and the non-executable procedure step), and presents a refined SKILL.md draft without restarting the interview or scaffolding a new directory.",
+      "files": ["evals/fixtures/draft-skill/SKILL.md"],
       "expectations": [
-        "Does not start the authoring interview",
-        "Does not scaffold a new skill directory"
-      ]
-    },
-    {
-      "id": 4,
-      "prompt": "Write a blog post explaining what agent skills are and why they matter. Any reasonable angle is fine — nothing to clarify; just write it.",
-      "expected_output": "The authoring loop does not engage; the agent writes the blog post directly, in its reply or to a file it names.",
-      "files": [],
-      "expectations": [
-        "Does not run the authoring interview or create any skill directory",
-        "Writes the requested blog post, either in its reply or to a file it names"
+        "Critiques the supplied draft against the rubric, naming concrete weaknesses in it",
+        "Produces a refined draft that fixes the named weaknesses",
+        "Does not restart the authoring interview or scaffold a new skill directory"
       ]
     }
   ]

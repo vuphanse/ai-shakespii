@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
 import { join } from 'node:path'
+import { splitFrontmatter } from '../../src/lib/parser/frontmatter'
 
 const CLI = join(import.meta.dir, '../../src/cli/index.ts')
 const SKILL_DIR = join(import.meta.dir, '../../skills/authoring-skills')
@@ -8,8 +9,7 @@ const SKILLS_ROOT = join(import.meta.dir, '../../skills')
 const REQUIRED_PROMPT_ANCHORS = [
   'Create a new skill called retry-taxonomy',
   'authoring interview',
-  'Lint my skill',
-  'blog post',
+  'Critique my draft skill',
 ]
 
 test('authoring-skills lints to zero findings through the real CLI', () => {
@@ -27,16 +27,15 @@ test('the skills corpus carries no cross-skill findings at the 0.65 threshold', 
   expect(report.corpusFindings).toEqual([])
 })
 
-test('evals.json carries the skill-creator shape with the four anchored cases', async () => {
+test('evals.json carries the skill-creator shape with the three anchored cases', async () => {
   const raw = await Bun.file(join(SKILL_DIR, 'evals/evals.json')).text()
   const evals = JSON.parse(raw) as {
     skill_name: string
-    evals: Array<{ id: number; prompt: string; expected_output: string; expectations: string[] }>
+    evals: Array<{ id: number; prompt: string; expected_output: string; files: string[]; expectations: string[] }>
   }
   expect(evals.skill_name).toBe('authoring-skills')
-  expect(evals.evals.length).toBeGreaterThanOrEqual(4)
-  const ids = evals.evals.map(c => c.id)
-  expect(new Set(ids).size).toBe(ids.length)
+  expect(evals.evals).toHaveLength(3)
+  expect(evals.evals.map(c => c.id)).toEqual([1, 2, 3])
   for (const c of evals.evals) {
     expect(Number.isInteger(c.id)).toBe(true)
     for (const field of [c.prompt, c.expected_output] as const) {
@@ -45,6 +44,7 @@ test('evals.json carries the skill-creator shape with the four anchored cases', 
     }
     expect(Array.isArray(c.expectations)).toBe(true)
     expect(c.expectations.length).toBeGreaterThan(0)
+    expect(Array.isArray(c.files)).toBe(true)
   }
   for (const anchor of REQUIRED_PROMPT_ANCHORS) {
     expect(evals.evals.some(c => c.prompt.includes(anchor))).toBe(true)
@@ -69,10 +69,28 @@ test('triggers.json carries 20 labeled queries: 12 positive, 8 near-miss negativ
   for (const q of doc.queries) expect(q.query.length).toBeGreaterThan(0)
 })
 
-test('v0.1.0 delegates CLI mechanics to using-shakespii', async () => {
+test('v0.2.0 delegates CLI mechanics to using-shakespii', async () => {
   const raw = await Bun.file(join(SKILL_DIR, 'SKILL.md')).text()
-  expect(raw).toContain('version: 0.1.0')
+  const { fm } = splitFrontmatter(raw)
+  expect(fm.error).toBeNull()
+  expect(fm.parsed?.version).toBe('0.2.0')
   expect(raw).toContain('using-shakespii')
   expect(raw).toContain('references/critique-rubric.md')
   expect(raw).toContain('references/headless-eval-rules.md')
+})
+
+test('eval 3 stages the pinned critiqueable draft fixture', async () => {
+  const raw = await Bun.file(join(SKILL_DIR, 'evals/evals.json')).text()
+  const evals = JSON.parse(raw) as { evals: Array<{ id: number; files: string[] }> }
+  const eval3 = evals.evals.find(c => c.id === 3)
+  expect(eval3).toBeDefined()
+  expect(eval3!.files).toEqual(['evals/fixtures/draft-skill/SKILL.md'])
+  const fixture = await Bun.file(join(SKILL_DIR, 'evals/fixtures/draft-skill/SKILL.md')).text()
+  expect(fixture.length).toBeGreaterThan(0)
+  const { fm, body } = splitFrontmatter(fixture)
+  expect(fm.error).toBeNull()
+  expect(fm.parsed?.name).toBe('draft-skill')
+  expect(body.length).toBeGreaterThan(0)
+  expect(fixture).toContain('I help with tidying up messy notes')
+  expect(fixture).toContain('Just use your best judgment for everything else.')
 })

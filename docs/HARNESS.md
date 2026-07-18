@@ -78,6 +78,18 @@ TR02's concern, measured separately by the trigger stage below. Executor
 failures (timeout / nonzero-exit / completed with no result event) become
 scenario error findings; the case is not graded and stays uncached.
 
+**Scenario-stage semantics (adjudicated 2026-07-18,
+docs/specs/2026-07-18-executor-frame-design.md).** The force-load frame is
+deliberate and load-bearing: the scenario stage is a skill-loaded
+capability test — "does the skill work once loaded". A near-miss negative
+(a prompt whose expectations assert the skill is NOT used) is structurally
+unmeasurable under this frame, because the preamble has already committed
+the executor to the skill lens (docs/CALIBRATION-M5D.md adjudication 6).
+Author scope negatives in `evals/triggers.json` only — the trigger stage
+measures them with no preamble. Bench's `with_skill` configuration shares
+the frame deliberately: it guarantees skill engagement, so the
+with/without delta measures the effect of using the skill, not routing.
+
 ## Executor isolation contract
 
 Every runner session — scenario executor, trigger probe, bench (both

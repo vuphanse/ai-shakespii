@@ -143,10 +143,15 @@ untouched, so `skillRoutingHash` is unchanged and all trigger caches replay.
   scaffold + lint loop, eval 2 = interview-only). Content contract for the
   replacement (exact JSON lands in the implementation plan):
   - Prompt supplies a draft SKILL.md via the harness `files` fixture
-    contract (fixture ships under `evals/fixtures/`) and asks for a
-    critique-and-refine pass against the skill's own rubric
-    (`references/critique-rubric.md`), with approval to proceed pre-granted
-    (headless-safe, no CLI dependency).
+    contract — the fixture path is pinned:
+    `evals/fixtures/draft-skill/SKILL.md`, and eval 3's `files` is exactly
+    that one entry. The prompt asks for a critique-and-refine pass against
+    the skill's own rubric (`references/critique-rubric.md`), with approval
+    to proceed pre-granted (headless-safe, no CLI dependency).
+  - The fixture is a deliberately critiqueable draft: a parseable SKILL.md
+    (frontmatter + body) planting at least two rubric violations, each
+    marked by a distinctive substring the weld test pins verbatim (the
+    plan enumerates the violations and their marker substrings).
   - Expectations assert in-skill behavior: applies the critique rubric to
     the supplied draft, names concrete weaknesses, produces a refined
     draft, and does not restart the interview or re-scaffold from scratch.
@@ -184,13 +189,19 @@ approved spec):
   `toHaveLength(3)` and ids exactly `[1, 2, 3]`; version pin `0.1.0` →
   `0.2.0`.
 - authoring-skills, fixture guard: the weld test's parsed eval type gains
-  `files`, and a targeted assertion pins the eval-3 fixture contract —
-  eval 3 declares a non-empty `files` list and every listed path exists
-  and is non-empty under the skill directory. This pin is load-bearing:
-  deterministic validation accepts an omitted `files` field
-  (`src/lib/harness/deterministic.ts` validates fixture paths only when
-  declared), so without it the required fixture could disappear while
-  every other stated check still passed.
+  `files`, and a targeted assertion pins the eval-3 fixture contract
+  exactly — not merely "non-empty and exists" (which `["SKILL.md"]` or
+  `["references/critique-rubric.md"]` would satisfy while violating the
+  contract):
+  - eval 3's `files` equals exactly
+    `["evals/fixtures/draft-skill/SKILL.md"]`;
+  - that fixture file exists, is non-empty, and parses as a draft skill
+    (content pins: YAML frontmatter delimiters plus the planted-defect
+    marker substrings from §3.5, asserted verbatim).
+  This pin is load-bearing: deterministic validation accepts an omitted
+  `files` field (`src/lib/harness/deterministic.ts` validates fixture
+  paths only when declared), so only the weld test guards the fixture's
+  presence, path, and critiqueable content.
 
 Assertion forms end up strictly stronger than before (exact counts and id
 sequences instead of floors + uniqueness; same shape checks, same anchor

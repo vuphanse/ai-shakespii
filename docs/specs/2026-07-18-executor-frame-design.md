@@ -38,10 +38,15 @@ Evidence verified during the brainstorm:
   The contradiction lives only in the authoring-guidance prose.
 - All 11 derived suites in ~/Dev/ai-skills already conform — the M5d
   sweep-ready repairs (ai-skills `7ea05e5`) moved every doomed scenario
-  negative into in-skill branches. The only remaining non-conforming
-  artifacts are the two bundled suites: using-shakespii eval 3 ("Fix the
-  ESLint errors in src/.") and authoring-skills eval 4 (the blog-post ask).
-  Both bundled skills already carry ample trigger-stage negatives (9 and 8
+  negative into in-skill branches. The remaining non-conforming artifacts
+  are all in the two bundled suites: using-shakespii eval 3 ("Fix the
+  ESLint errors in src/.") and authoring-skills evals 3 AND 4 — eval 4 is
+  the obvious blog-post negative, and eval 3 ("Lint my skill at
+  ./skills/note-taker and fix the findings") is a disguised one: its
+  expected output is "The authoring loop does not engage" with
+  does-not-engage expectations (found at phase review; the prompt reads
+  like a lint task, but for this skill it is a scope negative). Both
+  bundled skills already carry ample trigger-stage negatives (9 and 8
   `should_trigger: false` queries respectively), so scope-discrimination
   coverage does not depend on the scenario cases.
 - No lint rule enforces the evals.json near-miss mandate (TR01 checks only
@@ -59,9 +64,15 @@ User adjudications (2026-07-18, this brainstorm):
    delta measures the effect of using the skill, not routing). The trigger
    stage remains the sole owner of scope discrimination. `RUN_CACHE_VERSION`
    stays 2; `HARNESS_SCHEMA_VERSION` stays 1; no cache invalidation.
-2. **Delete both bundled scenario negatives** (using-shakespii eval 3,
-   authoring-skills eval 4) rather than replacing them; suites remain ≥3
-   cases (TR01: 5 and 3 remain).
+2. **Remove every bundled scenario negative; keep suites at the TR01
+   floor.** As adjudicated: delete using-shakespii eval 3 and
+   authoring-skills eval 4. Phase-review amendment (2026-07-18): review
+   found a third, disguised negative — authoring-skills eval 3 (see §1).
+   Deleting it too would leave 2 cases, below the TR01 ≥3 floor the
+   adjudication requires, so it is REPLACED with an in-skill behavior
+   branch (§3.5) — the only resolution consistent with both adjudicated
+   constraints (no scenario negatives; suites stay ≥3). Final counts: 5
+   and 3 cases.
 3. **Guidance-only enforcement** — no new lint rule; a scenario-negative
    heuristic rule is parked as a backlog candidate (fragile: "Does not …"
    expectations are also legitimate in refusal-branch evals).
@@ -119,17 +130,32 @@ with the same in-skill-branch wording plus the triggers.json pointer. Body
 edit only — the description is byte-frozen (frozen surface) and the name is
 untouched, so `skillRoutingHash` is unchanged and all trigger caches replay.
 
-### 3.5 Eval-suite deletions
+### 3.5 Eval-suite changes
 
 - `skills/using-shakespii/evals/evals.json`: delete case id 3; renumber 4→3,
-  5→4, 6→5 (contiguity for tidiness — cost-free, since any evals.json edit
-  rotates `skillContentHash` and re-buys the scenario cache regardless).
-  Five cases remain.
-- `skills/authoring-skills/evals/evals.json`: delete case id 4. Three cases
-  remain.
+  5→4, 6→5 (contiguity is part of the contract — §3.7 pins the exact id
+  sequence; cost-free, since any evals.json edit rotates `skillContentHash`
+  and re-buys the scenario cache regardless). Exactly five cases remain,
+  ids 1–5.
+- `skills/authoring-skills/evals/evals.json`: delete case id 4; REPLACE case
+  id 3 (the disguised negative) with an in-skill behavior branch exercising
+  the critique/refine phase, which evals 1–2 leave uncovered (eval 1 =
+  scaffold + lint loop, eval 2 = interview-only). Content contract for the
+  replacement (exact JSON lands in the implementation plan):
+  - Prompt supplies a draft SKILL.md via the harness `files` fixture
+    contract (fixture ships under `evals/fixtures/`) and asks for a
+    critique-and-refine pass against the skill's own rubric
+    (`references/critique-rubric.md`), with approval to proceed pre-granted
+    (headless-safe, no CLI dependency).
+  - Expectations assert in-skill behavior: applies the critique rubric to
+    the supplied draft, names concrete weaknesses, produces a refined
+    draft, and does not restart the interview or re-scaffold from scratch.
+  - The prompt carries a distinctive anchor substring for the weld test
+    (e.g. "Critique my draft skill" — final wording in the plan).
+  Exactly three cases remain, ids 1–3.
 
-Neither deleted case stages fixture `files`; no fixture cleanup needed.
-`evals/triggers.json` is untouched in both skills.
+The two deleted cases stage no fixture `files`; the replacement case adds
+its own fixture. `evals/triggers.json` is untouched in both skills.
 
 ### 3.6 Skill version bumps
 
@@ -148,31 +174,66 @@ approved spec):
 
 - using-shakespii: drop the `'Fix the ESLint errors'` prompt anchor (five
   anchors remain — the test title "five anchored cases" becomes literally
-  accurate again); case-count floor 6 → 5; version pin `0.7.0` → `0.8.0`.
-- authoring-skills: drop the `'blog post'` anchor (three remain); title
-  "four anchored cases" → "three"; count floor 4 → 3; version pin `0.1.0`
-  → `0.2.0`.
+  accurate again); replace the `>= 6` count floor with an exact pin —
+  `toHaveLength(5)` and ids exactly `[1, 2, 3, 4, 5]` (the renumbering in
+  §3.5 is contract, so the test asserts it; a floor would silently admit
+  extra cases or gaps); version pin `0.7.0` → `0.8.0`.
+- authoring-skills: drop the `'blog post'` anchor; replace the `'Lint my
+  skill'` anchor with the new eval-3 anchor from §3.5 (three anchors
+  total); title "four anchored cases" → "three"; exact pins
+  `toHaveLength(3)` and ids exactly `[1, 2, 3]`; version pin `0.1.0` →
+  `0.2.0`.
 
-Assertion forms stay as strong as before (same shape checks, same anchor
+Assertion forms end up strictly stronger than before (exact counts and id
+sequences instead of floors + uniqueness; same shape checks, same anchor
 mechanism, same exact-count trigger pins). Tests stay hermetic — no live
 `claude` is spawned anywhere in this change.
 
 ## 4. Verification and closure
 
-1. `bun test` — full suite green with the updated pins.
-2. `shakespii lint` on both bundled skills — exit 0, zero findings.
-3. `shakespii test --run --triggers` on both bundled skills — expected:
+Hermetic verification (AGENTS.md Verification Rules — all three, green at
+every commit, not just at the end):
+
+1. `bun test` (unpiped, full suite) — green with the updated pins.
+2. `bun run typecheck` — clean.
+3. `bun run check-pack` — tarball guard clean (the bundled skills ship in
+   the tarball; the eval/fixture changes must not break the layout pins).
+4. `shakespii lint` on both bundled skills — exit 0, zero findings.
+
+Live verification (harness safety per AGENTS.md: live sweeps run on a clean
+tree; containment is convention, not a sandbox):
+
+5. Precondition: `git status` clean (work committed) before any live run.
+6. `shakespii test --run --triggers` on both bundled skills — expected:
    trigger stage fully cached replay (routing hash untouched — this run
    doubles as live confirmation of the routing-scoped trigger key), scenario
    stage re-buys ~16 LLM calls (5 + 3 evals × executor + grader), exit 0.
-4. Install-gate resync of the two bundled live copies (`shakespii install`),
-   then a recursive diff against the live corpus — clean. A calibration/edit
+7. Post-run stray check: `git status` again, plus both doc roots (repo
+   `docs/` and `~/.ai-pref-nsync/local-docs/ai-shakespii/`) inspected for
+   files a live session may have written outside its workspace
+   (mem-2026-07-10: live sessions have escaped confinement before).
+
+Closure:
+
+8. Install-gate resync of the two bundled live copies — both installed
+   targets are occupied, and the installer refuses occupied targets without
+   `--force`, so the commands are:
+   `shakespii install skills/using-shakespii --force` and
+   `shakespii install skills/authoring-skills --force` (rc=0 each), then a
+   recursive diff of each installed copy against `skills/` — clean. An edit
    loop is not closed until this resync
    (mem-2026-07-12-calibration-loops-must-end-with-re-6af190).
-5. ai-cortex: update the adjudication-6 gotcha (its "until the tool changes"
-   clause resolves to the permanent rule: scenario evals are skill-loaded
-   capability tests; negatives live in triggers.json) and record the
-   Direction-B decision memory.
+9. Documentation mirror sync (dual-location rule): copy the edited
+   `docs/HARNESS.md` to
+   `~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/HARNESS.md`
+   and this spec to
+   `~/.ai-pref-nsync/local-docs/ai-shakespii/specs/`, verifying each with
+   `cmp` after `cp`.
+10. ai-cortex: update the adjudication-6 gotcha (its "until the tool
+    changes" clause resolves to the permanent rule: scenario evals are
+    skill-loaded capability tests; negatives live in triggers.json) and
+    keep the Direction-B decision memory current with the §2 phase-review
+    amendment.
 
 ## 5. Release — 0.3.2
 

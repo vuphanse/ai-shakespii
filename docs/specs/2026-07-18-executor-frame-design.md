@@ -93,9 +93,10 @@ authoring semantics before ~20 new suites are written.
 
 ## 3. Design — artifact changes
 
-All changes live in this repo. `src/` is untouched; no lint rule changes; no
-schema changes; historical specs and plans are point-in-time records and are
-not rewritten.
+All changes live in this repo — which is the source of truth for the two
+bundled companion skills (see §3.8 for the governance clarification this
+requires). `src/` is untouched; no lint rule changes; no schema changes;
+historical specs and plans are point-in-time records and are not rewritten.
 
 ### 3.1 docs/HARNESS.md — make the contract explicit
 
@@ -208,6 +209,26 @@ sequences instead of floors + uniqueness; same shape checks, same anchor
 mechanism, same exact-count trigger pins). Tests stay hermetic — no live
 `claude` is spawned anywhere in this change.
 
+### 3.8 AGENTS.md — live-corpus governance clarification
+
+The live-corpus rule (AGENTS.md, "Live Corpus & Harness Safety") states
+that live copies change only via `shakespii install --force` from
+`~/Dev/ai-skills`, without qualification. Read literally, that forbids ever
+updating the two bundled skills' live copies: using-shakespii and
+authoring-skills have never lived in ~/Dev/ai-skills (no source
+directories exist there), ship in the npm tarball from this repo's
+`skills/` (AGENTS.md, Repo Layout), and are weld-pinned here. The M5d
+migration decision that sentence records governed the derived personal
+corpus only.
+
+Amend the sentence to name both sources explicitly: derived personal
+skills install from `~/Dev/ai-skills`; the bundled companion skills
+(using-shakespii, authoring-skills) install from this repo's `skills/`;
+in both cases live copies change ONLY via `shakespii install --force`
+from their source repo, never by hand-editing an installed copy. This is
+a clarification of existing intent — the install-gate-only mechanism is
+unchanged — not a governance change.
+
 ## 4. Verification and closure
 
 **Binary discipline for every step below:** all shakespii commands run
@@ -244,9 +265,10 @@ tree; containment is convention, not a sandbox):
 
 Closure:
 
-8. Install-gate resync of the two bundled live copies — both installed
-   targets are occupied, and the installer refuses occupied targets without
-   `--force`, so the commands are:
+8. Install-gate resync of the two bundled live copies from their source of
+   truth, this repo's `skills/` (§3.8) — both installed targets are
+   occupied, and the installer refuses occupied targets without `--force`,
+   so the commands are:
    `bun src/cli/index.ts install skills/using-shakespii --force` and
    `bun src/cli/index.ts install skills/authoring-skills --force` (rc=0
    each — the checkout's installer, so the gate and the installed copies
@@ -260,7 +282,18 @@ Closure:
    and this spec to
    `~/.ai-pref-nsync/local-docs/ai-shakespii/specs/`, verifying each with
    `cmp` after `cp`.
-10. ai-cortex: update the adjudication-6 gotcha (its "until the tool
+10. Record the live-verification outcome (AGENTS.md workflow rule: a
+    verification pass against the real corpus is recorded, not just run)
+    in `docs/CALIBRATION-EXECUTOR-FRAME.md` — git-ignored per the
+    documentation policy (it matches the existing `docs/CALIBRATION-*.md`
+    ignore pattern), canonical copy at
+    `~/.ai-pref-nsync/local-docs/ai-shakespii/knowledge-references/CALIBRATION-EXECUTOR-FRAME.md`,
+    `cp` + `cmp` verified. Required content: trigger cached-replay counts
+    for both skills (the routing-scoped-key confirmation from step 6),
+    scenario/grading results per eval, install-resync return codes and
+    diff status (step 8), the stray-check outcome (step 7), and any
+    adjudications the run surfaces.
+11. ai-cortex: update the adjudication-6 gotcha (its "until the tool
     changes" clause resolves to the permanent rule: scenario evals are
     skill-loaded capability tests; negatives live in triggers.json) and
     keep the Direction-B decision memory current with the §2 phase-review
@@ -299,8 +332,11 @@ mechanics. No cache-epoch bump rides along.
   edits); the description-freeze test continues to pass unmodified.
 - Test assertions — no weakenings; §3.7 pin updates are deliberate contract
   changes sanctioned by this spec.
-- Live corpus governance — live copies change only through the install gate
-  (§4 step 4); ~/Dev/ai-skills is untouched (no derived skill changes).
+- Live corpus governance — live copies change only through the install
+  gate (§4 step 8), from the bundled pair's source of truth in this repo's
+  `skills/` per the §3.8 AGENTS.md clarification; ~/Dev/ai-skills is
+  untouched (no derived skill changes, and it has never contained the
+  bundled pair).
 
 ## 8. Out of scope
 

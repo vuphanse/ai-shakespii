@@ -1,7 +1,7 @@
 ---
 name: using-shakespii
 description: "Use when the user asks to lint, audit, test, benchmark, validate, or fix an agent skill — from a single SKILL.md frontmatter check to trigger-accuracy measurement or a corpus-wide audit of installed skills for duplication — driving the shakespii CLI (init, lint --json, test --run, bench) to resolve findings until clean."
-version: 0.7.0
+version: 0.8.0
 ---
 
 # using-shakespii
@@ -174,8 +174,10 @@ Authoring branch — create a new skill:
 6. Fill every section of the scaffold, replacing each placeholder token (the scaffold
    marks them with `TODO(shakespii)` plus a trailing colon) with real content.
 7. Write at least one concrete worked example in Examples — real input, real output.
-8. Fill `evals/evals.json` with at least three cases, one of them a near-miss
-   negative that must not trigger the skill.
+8. Fill `evals/evals.json` with at least three cases, each an in-skill
+   behavior branch (happy path, refusal or error branches, variants).
+   Scope negatives do not belong here — put near-miss queries in
+   `evals/triggers.json`, where the trigger stage measures them.
 9. Work the fix loop until lint is clean, then present the skill, its lint output,
    and its evals to the human. Install only with explicit approval and never with
    findings outstanding — and when approved, install through `shakespii install`

@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
 import { join } from 'node:path'
+import { splitFrontmatter } from '../../src/lib/parser/frontmatter'
 
 const CLI = join(import.meta.dir, '../../src/cli/index.ts')
 const SKILL_DIR = join(import.meta.dir, '../../skills/using-shakespii')
@@ -7,7 +8,6 @@ const SKILL_DIR = join(import.meta.dir, '../../skills/using-shakespii')
 const REQUIRED_PROMPT_ANCHORS = [
   'Lint my skill',
   'Create a new skill',
-  'Fix the ESLint errors',
   'Run shakespii lint on',
   'Audit all my installed skills',
   'Run the evals for',
@@ -28,9 +28,8 @@ test('evals.json carries the skill-creator shape with the five anchored cases', 
     evals: Array<{ id: number; prompt: string; expected_output: string; expectations: string[] }>
   }
   expect(evals.skill_name).toBe('using-shakespii')
-  expect(evals.evals.length).toBeGreaterThanOrEqual(6)
-  const ids = evals.evals.map(c => c.id)
-  expect(new Set(ids).size).toBe(ids.length)
+  expect(evals.evals).toHaveLength(5)
+  expect(evals.evals.map(c => c.id)).toEqual([1, 2, 3, 4, 5])
   for (const c of evals.evals) {
     expect(Number.isInteger(c.id)).toBe(true)
     for (const field of [c.prompt, c.expected_output] as const) {
@@ -67,9 +66,11 @@ test('triggers.json carries 20 labeled queries: 11 positive, 9 near-miss negativ
   for (const q of doc.queries) expect(q.query.length).toBeGreaterThan(0)
 })
 
-test('v0.7.0 teaches the bench, trigger, and install loops', async () => {
+test('v0.8.0 teaches the bench, trigger, and install loops', async () => {
   const raw = await Bun.file(join(SKILL_DIR, 'SKILL.md')).text()
-  expect(raw).toContain('version: 0.7.0')
+  const { fm } = splitFrontmatter(raw)
+  expect(fm.error).toBeNull()
+  expect(fm.parsed?.version).toBe('0.8.0')
   expect(raw).toContain('shakespii bench')
   expect(raw).toContain('--triggers')
   expect(raw).toContain('shakespii install')
